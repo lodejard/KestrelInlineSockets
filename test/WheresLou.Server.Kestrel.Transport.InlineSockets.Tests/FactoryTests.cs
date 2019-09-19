@@ -1,6 +1,7 @@
 using System;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
 using Microsoft.Extensions.DependencyInjection;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Factories;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Fixtures;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Stubs;
 using Xunit;

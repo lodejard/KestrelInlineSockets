@@ -4,6 +4,7 @@ using System;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Factories;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {

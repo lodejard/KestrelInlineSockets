@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Internal;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Fixtures
 {
@@ -14,6 +18,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Fixtures
             _serviceProvider = new ServiceCollection()
                 .AddInlineSocketsTransport()
                 .AddLogging()
+                .AddTransient<IConfigureOptions<KestrelServerOptions>, KestrelServerOptionsSetup>()
+                .AddSingleton<IServer, KestrelServer>()
                 .BuildServiceProvider();
         }
 

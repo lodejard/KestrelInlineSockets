@@ -4,6 +4,7 @@ using System.Text;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using WheresLou.Server.Kestrel.Transport.InlineSockets;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Factories;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -13,7 +14,10 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             return services
                 .AddTransient<ITransportFactory, TransportFactory>()
-                .AddTransient<IConnectionFactory, ConnectionFactory>();
+                .AddTransient<IConnectionFactory, ConnectionFactory>()
+                .AddTransient<IConnectionPipeReaderFactory, ConnectionPipeReaderFactory>()
+                .AddTransient<IConnectionPipeWriterFactory, ConnectionPipeWriterFactory>()
+                ;
         }
     }
 }

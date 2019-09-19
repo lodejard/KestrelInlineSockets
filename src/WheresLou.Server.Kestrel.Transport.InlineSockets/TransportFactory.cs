@@ -1,6 +1,7 @@
 using System.Buffers;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
 using Microsoft.Extensions.Logging;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Factories;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
