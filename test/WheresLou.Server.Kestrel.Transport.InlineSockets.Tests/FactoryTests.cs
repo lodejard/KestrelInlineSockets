@@ -7,7 +7,7 @@ using Xunit;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
 {
-    public class FactoryTests 
+    public class FactoryTests
     {
         [Fact]
         public void TransportFactoryCreate()
@@ -26,8 +26,12 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
         public void ConnectionFactoryCreate()
         {
             using (var services = new ServicesFixture())
-            {                
+            {
                 var connectionFactory = services.GetService<IConnectionFactory>();
+
+                var connection = connectionFactory.Create(new ConnectionContext(null, null));
+
+                Assert.NotNull(connection);
             }
         }
     }

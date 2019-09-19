@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Stubs
 {
-    internal class TestEndPointInformation : IEndPointInformation
+    public class TestEndPointInformation : IEndPointInformation
     {
         public ListenType Type { get; set; }
 
