@@ -26,7 +26,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Fixtures
 
         public void Dispose()
         {
-            throw new NotImplementedException();
+            
         }
     }
 }

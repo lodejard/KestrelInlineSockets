@@ -20,6 +20,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         private readonly ConnectionContext _context;
         private readonly PipeReader _connectionPipeReader;
         private readonly PipeWriter _connectionPipeWriter;
+        private readonly CancellationTokenSource _connectionCloseRequestedTokenSource;
 
         private string _connectionId;
         private IDuplexPipe _applicationDuplexPipe;
@@ -31,10 +32,29 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             IConnectionPipeWriterFactory connectionPipeWriterFactory,
             ConnectionContext context)
         {
+            _connectionCloseRequestedTokenSource = new CancellationTokenSource();
             _logger = logger;
             _context = context;
             _connectionPipeReader = connectionPipeReaderFactory.Create(context);
             _connectionPipeWriter = connectionPipeWriterFactory.Create(context);
+
+            // this mechanism propogates a server-wide request for graceful shutdown. it is received by the http1/2 framing layer.
+            base.ConnectionClosedRequested.Register(() => _connectionCloseRequestedTokenSource.Cancel());
+            base.ConnectionClosedRequested = _connectionCloseRequestedTokenSource.Token;
+            _connectionCloseRequestedTokenSource.Token.Register(OnCloseRequested);
+
+            // this mechanism triggers when the connection tranceiving is entirely complete. used for cleanup. associated with abort.
+            base.ConnectionClosed = _context.ConnectionClosed;
+        }
+
+        private void OnCloseRequested()
+        {
+            throw new NotImplementedException();
+        }
+
+        private void OnAbortRequested(ConnectionAbortedException abortReason)
+        {
+            throw new NotImplementedException();
         }
 
         public override IFeatureCollection Features => this;
@@ -129,39 +149,42 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         CancellationToken IConnectionLifetimeFeature.ConnectionClosed
         {
-            get => throw new NotImplementedException();
+            get => _context.ConnectionClosed;
             set => throw new NotImplementedException();
         }
 
         CancellationToken IConnectionLifetimeNotificationFeature.ConnectionClosedRequested
         {
-            get => throw new NotImplementedException();
+            get => _connectionCloseRequestedTokenSource.Token;
             set => throw new NotImplementedException();
         }
 
         public override void Abort()
         {
-            base.Abort();
+            OnAbortRequested(null);
         }
 
         public override void Abort(ConnectionAbortedException abortReason)
         {
-            base.Abort(abortReason);
+            OnAbortRequested(abortReason);
         }
 
         void IConnectionLifetimeFeature.Abort()
         {
-            throw new NotImplementedException();
+            OnAbortRequested(null);
         }
 
         void IConnectionHeartbeatFeature.OnHeartbeat(Action<object> action, object state)
         {
-            throw new NotImplementedException();
+            // this method must be delegated to the base implementation because private fields and
+            // non-virtual public methods prevent the implementation from being controlled
+            base.OnHeartbeat(action, state);
         }
 
         void IConnectionLifetimeNotificationFeature.RequestClose()
         {
-            throw new NotImplementedException();
+            // signal that a close has been requested
+            _connectionCloseRequestedTokenSource.Cancel();
         }
     }
 }

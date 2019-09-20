@@ -10,11 +10,24 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
     {
         private readonly ILogger<ConnectionPipeReader> _logger;
         private readonly ConnectionContext _context;
+        private readonly CancellationTokenSource _writerCompleted;
+        private Exception _writerCompletedException;
 
         public ConnectionPipeReader(ILogger<ConnectionPipeReader> logger, ConnectionContext context)
         {
             _logger = logger;
             _context = context;
+            _writerCompleted = new CancellationTokenSource();
+        }
+
+        public override bool TryRead(out ReadResult result)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override ValueTask<ReadResult> ReadAsync(CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
         }
 
         public override void AdvanceTo(SequencePosition consumed)
@@ -34,22 +47,13 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public override void Complete(Exception exception = null)
         {
-            throw new NotImplementedException();
+            Interlocked.CompareExchange(ref _writerCompletedException, exception, null);
+            _writerCompleted.Cancel(throwOnFirstException: false);
         }
 
         public override void OnWriterCompleted(Action<Exception, object> callback, object state)
         {
-            throw new NotImplementedException();
-        }
-
-        public override ValueTask<ReadResult> ReadAsync(CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override bool TryRead(out ReadResult result)
-        {
-            throw new NotImplementedException();
+            _writerCompleted.Token.Register(() => callback(_writerCompletedException, state));
         }
     }
 }

@@ -8,33 +8,16 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
     public class ConnectionPipeWriter : PipeWriter
     {
-        private ILogger<ConnectionPipeWriter> _logger;
-        private ConnectionContext _context;
+        private readonly ILogger<ConnectionPipeWriter> _logger;
+        private readonly ConnectionContext _context;
+        private readonly CancellationTokenSource _readerCompleted;
+        private Exception _readerCompletedException;
 
         public ConnectionPipeWriter(ILogger<ConnectionPipeWriter> logger, ConnectionContext context)
         {
             _logger = logger;
             _context = context;
-        }
-
-        public override void Advance(int bytes)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void CancelPendingFlush()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Complete(Exception exception = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override ValueTask<FlushResult> FlushAsync(CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
+            _readerCompleted = new CancellationTokenSource();
         }
 
         public override Memory<byte> GetMemory(int sizeHint = 0)
@@ -47,9 +30,30 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             throw new NotImplementedException();
         }
 
-        public override void OnReaderCompleted(Action<Exception, object> callback, object state)
+        public override void Advance(int bytes)
         {
             throw new NotImplementedException();
+        }
+
+        public override ValueTask<FlushResult> FlushAsync(CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void CancelPendingFlush()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Complete(Exception exception = null)
+        {
+            Interlocked.CompareExchange(ref _readerCompletedException, exception, null);
+            _readerCompleted.Cancel(throwOnFirstException: false);
+        }
+
+        public override void OnReaderCompleted(Action<Exception, object> callback, object state)
+        {
+            _readerCompleted.Token.Register(() => callback(_readerCompletedException, state));
         }
     }
 }

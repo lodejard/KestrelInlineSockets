@@ -57,6 +57,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public async Task UnbindAsync()
         {
+            _acceptLoopTokenSource.Cancel();
             _listener.Stop();
             await _acceptLoopTask;
         }
@@ -78,14 +79,33 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
                     HandleErrors(Task.Run(async () =>
                     {
-                        var connection = _connectionFactory.Create(new ConnectionContext(_context.MemoryPool, socket));
+                        // 1. get onconnection incomplete task
+                        // 2. get tranceiving incomplete task
+                        // 3. await tranceiving task
+                        // 4. await onconnection task
+                        // 5. dispose connection
+
+                        var connectionClosedTokenSource = new CancellationTokenSource();
+
+                        var connectionContext = new ConnectionContext(
+                            _context.MemoryPool, 
+                            socket, 
+                            connectionClosedTokenSource.Token);
+
+                        var connection = _connectionFactory.Create(connectionContext);
+
                         await _context.ConnectionDispatcher.OnConnection(connection);
+
+                        connectionClosedTokenSource.Dispose();
                     }));
                 }
                 catch (SocketException ex) when (ex.SocketErrorCode == SocketError.OperationAborted)
                 {
-                    // only way to exit loop?
-                    return;
+                    // listen socket closed
+                }
+                catch(ObjectDisposedException)
+                {
+                    // listen socket closed
                 }
             }
         }

@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.Factories;
@@ -30,7 +31,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
             {
                 var connectionFactory = services.GetService<IConnectionFactory>();
 
-                var connection = connectionFactory.Create(new ConnectionContext(null, null));
+                var connection = connectionFactory.Create(new ConnectionContext(null, null, CancellationToken.None));
 
                 Assert.NotNull(connection);
             }

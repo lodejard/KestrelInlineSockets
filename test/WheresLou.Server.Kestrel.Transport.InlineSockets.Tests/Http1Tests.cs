@@ -21,17 +21,16 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
         {
             using (var services = new ServicesFixture())
             using (var app = new AppFixture())
+            using (var client = new HttpClient())
+            using (var timeout = new CancellationTokenSource(TimeSpan.FromMilliseconds(250)))
             {
                 var server = services.GetService<IServer>();
                 var options = services.GetService<IOptions<KestrelServerOptions>>();
 
-                
                 await server.StartAsync(app, CancellationToken.None);
 
-                var client = new HttpClient();
-                var response = await client.GetAsync("http://localhost:5000/");
+                var response = await client.GetAsync("http://localhost:5000/", timeout.Token);
 
-                var x = 5;
             }
         }
 
