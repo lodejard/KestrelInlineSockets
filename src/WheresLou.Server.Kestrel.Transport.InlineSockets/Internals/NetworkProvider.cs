@@ -1,0 +1,197 @@
+using System;
+using System.Buffers;
+using System.Collections.Generic;
+using System.Net;
+using System.Net.Sockets;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Internals
+{
+    public class NetworkProvider : INetworkProvider
+    {
+        public virtual INetworkListener CreateListener(NetworkListenerSettings settings)
+        {
+            return new NetworkListener(settings);
+        }
+
+        public class NetworkListener : INetworkListener
+        {
+            private readonly TcpListener _listener;
+            private readonly int? _listenerBacklog;
+            private readonly bool? _socketNoDelay;
+
+            public NetworkListener(NetworkListenerSettings settings)
+            {
+                // TODO: logic to bind ipv4 and/or ipv6 ?
+                _listener = new TcpListener(settings.EndPointInformation.IPEndPoint);
+
+                if (settings.ExclusiveAddressUse.HasValue)
+                {
+                    _listener.ExclusiveAddressUse = settings.ExclusiveAddressUse.Value;
+                }
+
+                if (settings.AllowNatTraversal.HasValue)
+                {
+                    _listener.AllowNatTraversal(settings.AllowNatTraversal.Value);
+                }
+
+                _listenerBacklog = settings.ListenerBacklog;
+                _socketNoDelay = settings.EndPointInformation.NoDelay;
+            }
+
+            public virtual void Start()
+            {
+                if (_listenerBacklog.HasValue)
+                {
+                    _listener.Start(_listenerBacklog.Value);
+                }
+                else
+                {
+                    _listener.Start();
+                }
+            }
+
+            public virtual void Stop()
+            {
+                _listener.Stop();
+            }
+
+            public virtual async Task<INetworkSocket> AcceptSocketAsync()
+            {
+                var socket = await _listener.AcceptSocketAsync();
+                if (_socketNoDelay.HasValue)
+                {
+                    socket.NoDelay = _socketNoDelay.Value;
+                }
+                return new NetworkSocket(socket);
+            }
+        }
+
+        private class NetworkSocket : INetworkSocket
+        {
+            private readonly Socket _socket;
+
+            private readonly object _receiveSync = new object();
+            private readonly SocketAsyncEventArgs _receiveEventArgs;
+            private TaskCompletionSource<int> _receiveAsyncTaskSource;
+            private TaskCompletionSource<int> _receiveAsyncTaskSourceCache;
+
+            public NetworkSocket(Socket socket)
+            {
+                _socket = socket;
+                _receiveEventArgs = new SocketAsyncEventArgs();
+                _receiveEventArgs.Completed += ReceiveAsyncCompleted;
+            }
+
+            public virtual EndPoint LocalEndPoint => _socket.LocalEndPoint;
+
+            public virtual EndPoint RemoteEndPoint => _socket.RemoteEndPoint;
+
+            public Task<int> ReceiveAsync(Memory<byte> memory, CancellationToken cancellationToken)
+            {
+                if (!MemoryMarshal.TryGetArray((ReadOnlyMemory<byte>)memory, out var segment))
+                {
+                    throw new ArgumentException("Memory<byte> must be backed by an array", nameof(memory));
+                }
+
+                lock (_receiveSync)
+                {
+                    _receiveEventArgs.SetBuffer(segment.Array, segment.Offset, segment.Count);
+
+                    if (_receiveAsyncTaskSource != null)
+                    {
+                        throw new InvalidOperationException("Concurrent calls to ReceiveAsync are not allowed");
+                    }
+
+                    _receiveAsyncTaskSource = _receiveAsyncTaskSourceCache ?? new TaskCompletionSource<int>();
+                    _receiveAsyncTaskSourceCache = null;
+
+                    try
+                    {
+                        var receiveAsyncIsPending = _socket.ReceiveAsync(_receiveEventArgs);
+                        if (receiveAsyncIsPending)
+                        {
+                            return _receiveAsyncTaskSource.Task;
+                        }
+                    }
+                    catch
+                    {
+                        _receiveAsyncTaskSourceCache = _receiveAsyncTaskSource;
+                        _receiveAsyncTaskSource = null;
+                        throw;
+                    }
+
+                    _receiveAsyncTaskSourceCache = _receiveAsyncTaskSource;
+                    _receiveAsyncTaskSource = null;
+
+                    if (_receiveEventArgs.SocketError != SocketError.Success)
+                    {
+                        ThrowSocketException(_receiveEventArgs.SocketError);
+
+                        void ThrowSocketException(SocketError e)
+                        {
+                            throw new SocketException((int)e);
+                        }
+                    }
+
+                    return Task.FromResult(_receiveEventArgs.BytesTransferred);
+                }
+            }
+
+            private void ReceiveAsyncCompleted(object sender, SocketAsyncEventArgs e)
+            {
+                TaskCompletionSource<int> receiveAsyncTaskSource;
+                SocketError socketError;
+                int bytesTransferred;
+                lock (_receiveSync)
+                {                    
+                    receiveAsyncTaskSource = _receiveAsyncTaskSource;
+                    socketError = _receiveEventArgs.SocketError;
+                    bytesTransferred = _receiveEventArgs.BytesTransferred;
+
+                    _receiveAsyncTaskSource = null;
+                }
+
+                // TODO: more robust guard against reading from cancelled socket
+                if (socketError != SocketError.Success)
+                {
+                    receiveAsyncTaskSource?.TrySetException(new SocketException((int)socketError));
+                }
+                else
+                {
+                    receiveAsyncTaskSource?.TrySetResult(bytesTransferred);
+                }
+            }
+
+            public void CancelPendingRead()
+            {
+                TaskCompletionSource<int> receiveAsyncTaskSource;
+
+                lock (_receiveSync)
+                {
+                    receiveAsyncTaskSource = _receiveAsyncTaskSource;
+                    _receiveAsyncTaskSource = null;
+                }
+
+                // TODO: more robust guard against reading from cancelled socket
+                receiveAsyncTaskSource?.TrySetCanceled();
+            }
+
+            public int Send(ReadOnlySequence<byte> data)
+            {
+                // TODO: avoid allocating this List<T>
+                var segments = new List<ArraySegment<byte>>();
+                foreach(var buffer in data)
+                {
+                    MemoryMarshal.TryGetArray(buffer, out var segment);
+                    segments.Add(segment);
+                }
+                return _socket.Send(segments, SocketFlags.None);
+            }
+
+        }
+    }
+}

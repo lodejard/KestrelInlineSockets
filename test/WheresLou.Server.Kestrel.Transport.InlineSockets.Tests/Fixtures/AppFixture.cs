@@ -19,14 +19,13 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Fixtures
 
         }
 
-        public async Task ProcessRequestAsync(IFeatureCollection context)
-        {
-
-        }
+        public Task ProcessRequestAsync(IFeatureCollection context) => OnRequest(context);
 
         public void Dispose()
         {
             
         }
+
+        public Func<IFeatureCollection, Task> OnRequest { get; set; } = context => Task.CompletedTask;
     }
 }

@@ -31,7 +31,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
             {
                 var connectionFactory = services.GetService<IConnectionFactory>();
 
-                var connection = connectionFactory.Create(new ConnectionContext(null, null, CancellationToken.None));
+                var connection = connectionFactory.Create(new ConnectionContext(null, null, null));
 
                 Assert.NotNull(connection);
             }

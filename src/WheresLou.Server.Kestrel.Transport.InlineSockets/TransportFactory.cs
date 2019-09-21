@@ -1,23 +1,28 @@
 using System.Buffers;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.Factories;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
     public class TransportFactory : ITransportFactory
     {
-        private readonly ILogger<Transport> _logger;
-        private readonly IConnectionFactory _connectionFactory;
-        private readonly MemoryPool<byte> _memoryPool;
+        private readonly TransportContext _context;
 
         public TransportFactory(
             ILogger<Transport> logger,
+            IOptions<InlineSocketsTransportOptions> options,
+            INetworkProvider networkProvider,
             IConnectionFactory connectionFactory)
         {
-            _logger = logger;
-            _connectionFactory = connectionFactory;
-            _memoryPool = KestrelMemoryPool.Create();
+            _context = new TransportContext(
+                logger,
+                options.Value,
+                KestrelMemoryPool.Create(),
+                networkProvider,
+                connectionFactory);
         }
 
         public virtual ITransport Create(
@@ -25,12 +30,9 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             IConnectionDispatcher connectionDispatcher)
         {
             return new Transport(
-                _logger, 
-                _connectionFactory, 
-                new TransportContext(
-                    _memoryPool, 
-                    endPointInformation, 
-                    connectionDispatcher));
+                _context, 
+                endPointInformation, 
+                connectionDispatcher);
         }
     }
 }

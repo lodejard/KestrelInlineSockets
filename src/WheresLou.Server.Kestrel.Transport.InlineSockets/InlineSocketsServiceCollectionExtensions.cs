@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using WheresLou.Server.Kestrel.Transport.InlineSockets;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.Factories;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -17,6 +18,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 .AddTransient<IConnectionFactory, ConnectionFactory>()
                 .AddTransient<IConnectionPipeReaderFactory, ConnectionPipeReaderFactory>()
                 .AddTransient<IConnectionPipeWriterFactory, ConnectionPipeWriterFactory>()
+                .AddTransient<INetworkProvider, NetworkProvider>();
                 ;
         }
     }

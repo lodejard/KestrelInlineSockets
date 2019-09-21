@@ -5,18 +5,21 @@ using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
 using Microsoft.Extensions.Logging;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.Factories;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
-    public partial class Connection : TransportConnection, IDuplexPipe, IHttpConnectionFeature, IConnectionIdFeature, IConnectionTransportFeature, IConnectionItemsFeature, IMemoryPoolFeature, IApplicationTransportFeature, ITransportSchedulerFeature, IConnectionLifetimeFeature, IConnectionHeartbeatFeature, IConnectionLifetimeNotificationFeature //, IFeatureCollection, IEnumerable<KeyValuePair<Type, object>>, IEnumerable
+    public partial class Connection : TransportConnection, IConnection, IDuplexPipe, IHttpConnectionFeature, IConnectionIdFeature, IConnectionTransportFeature, IConnectionItemsFeature, IMemoryPoolFeature, IApplicationTransportFeature, ITransportSchedulerFeature, IConnectionLifetimeFeature, IConnectionHeartbeatFeature, IConnectionLifetimeNotificationFeature //, IFeatureCollection, IEnumerable<KeyValuePair<Type, object>>, IEnumerable
     {
         private readonly ILogger<Connection> _logger;
+        private readonly INetworkProvider _networkProvider;
         private readonly ConnectionContext _context;
         private readonly PipeReader _connectionPipeReader;
         private readonly PipeWriter _connectionPipeWriter;
@@ -28,33 +31,40 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public Connection(
             ILogger<Connection> logger,
+            INetworkProvider networkProvider,
             IConnectionPipeReaderFactory connectionPipeReaderFactory,
             IConnectionPipeWriterFactory connectionPipeWriterFactory,
             ConnectionContext context)
         {
             _connectionCloseRequestedTokenSource = new CancellationTokenSource();
             _logger = logger;
+            _networkProvider = networkProvider;
             _context = context;
             _connectionPipeReader = connectionPipeReaderFactory.Create(context);
             _connectionPipeWriter = connectionPipeWriterFactory.Create(context);
 
             // this mechanism propogates a server-wide request for graceful shutdown. it is received by the http1/2 framing layer.
-            base.ConnectionClosedRequested.Register(() => _connectionCloseRequestedTokenSource.Cancel());
+            base.ConnectionClosedRequested.Register(OnConnectionCloseRequested);
             base.ConnectionClosedRequested = _connectionCloseRequestedTokenSource.Token;
             _connectionCloseRequestedTokenSource.Token.Register(OnCloseRequested);
 
             // this mechanism triggers when the connection tranceiving is entirely complete. used for cleanup. associated with abort.
-            base.ConnectionClosed = _context.ConnectionClosed;
+            base.ConnectionClosed = _context.ConnectionClosed.Token;
+
+            void OnConnectionCloseRequested()
+            {
+                _connectionCloseRequestedTokenSource.Cancel();
+            }
         }
 
         private void OnCloseRequested()
         {
-            throw new NotImplementedException();
+            //throw new NotImplementedException();
         }
 
         private void OnAbortRequested(ConnectionAbortedException abortReason)
         {
-            throw new NotImplementedException();
+            //throw new NotImplementedException();
         }
 
         public override IFeatureCollection Features => this;
@@ -86,6 +96,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             get => ((IConnectionIdFeature)this).ConnectionId;
             set => ((IConnectionIdFeature)this).ConnectionId = value;
         }
+
+        TransportConnection IConnection.TransportConnection => this;
 
         string IConnectionIdFeature.ConnectionId
         {
@@ -149,7 +161,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         CancellationToken IConnectionLifetimeFeature.ConnectionClosed
         {
-            get => _context.ConnectionClosed;
+            get => _context.ConnectionClosed.Token;
             set => throw new NotImplementedException();
         }
 
@@ -185,6 +197,11 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         {
             // signal that a close has been requested
             _connectionCloseRequestedTokenSource.Cancel();
+        }
+
+        Task IConnection.TranceiveAsync()
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -6,7 +6,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Stubs
 {
     public class TestConnectionDispatcher : IConnectionDispatcher
     {
-        public List<TransportConnection> Connections = new List<TransportConnection>();
+        public List<TransportConnection> Connections { get; } = new List<TransportConnection>();
 
         public Task OnConnection(TransportConnection connection)
         {

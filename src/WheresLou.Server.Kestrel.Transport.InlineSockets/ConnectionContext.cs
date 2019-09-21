@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Net.Sockets;
 using System.Threading;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
@@ -8,8 +9,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
     {
         public ConnectionContext(
             MemoryPool<byte> memoryPool, 
-            Socket socket,
-            CancellationToken connectionClosed)
+            INetworkSocket socket,
+            CancellationTokenSource connectionClosed)
         {
             MemoryPool = memoryPool;
             Socket = socket;
@@ -17,7 +18,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         }
 
         public MemoryPool<byte> MemoryPool { get; }
-        public Socket Socket { get; }
-        public CancellationToken ConnectionClosed { get; }
+        public INetworkSocket Socket { get; }
+        public CancellationTokenSource ConnectionClosed { get; }
     }
 }

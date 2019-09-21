@@ -1,5 +1,6 @@
 using System;
 using System.IO.Pipelines;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -11,33 +12,45 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         private readonly ILogger<ConnectionPipeWriter> _logger;
         private readonly ConnectionContext _context;
         private readonly CancellationTokenSource _readerCompleted;
+        private readonly RollingMemory _buffer;
         private Exception _readerCompletedException;
+
 
         public ConnectionPipeWriter(ILogger<ConnectionPipeWriter> logger, ConnectionContext context)
         {
             _logger = logger;
             _context = context;
             _readerCompleted = new CancellationTokenSource();
+            _buffer = new RollingMemory(context.MemoryPool);
         }
 
-        public override Memory<byte> GetMemory(int sizeHint = 0)
+        public override Memory<byte> GetMemory(int sizeHint)
         {
-            throw new NotImplementedException();
+            return _buffer.GetTrailingMemory(sizeHint);
         }
 
-        public override Span<byte> GetSpan(int sizeHint = 0)
+        public override Span<byte> GetSpan(int sizeHint)
         {
-            throw new NotImplementedException();
+            return _buffer.GetTrailingMemory(sizeHint).Span;
         }
 
         public override void Advance(int bytes)
         {
-            throw new NotImplementedException();
+            _buffer.ConsumeTrailingMemory(bytes);
         }
 
-        public override ValueTask<FlushResult> FlushAsync(CancellationToken cancellationToken = default)
+        public override ValueTask<FlushResult> FlushAsync(CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            while (!_buffer.Empty)
+            {
+                var memory = _buffer.GetOccupiedMemory();
+                var bytes = _context.Socket.Send(memory);
+                _buffer.ConsumeOccupiedMemory(bytes);
+            }
+
+            return new ValueTask<FlushResult>(new FlushResult(
+                isCanceled: false,
+                isCompleted: false));
         }
 
         public override void CancelPendingFlush()
@@ -47,8 +60,12 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public override void Complete(Exception exception = null)
         {
-            Interlocked.CompareExchange(ref _readerCompletedException, exception, null);
-            _readerCompleted.Cancel(throwOnFirstException: false);
+            // TODO: verify this is the correct order of operations
+            _context.ConnectionClosed.Cancel();
+
+            // TODO: is this complete the writer? or the "reader" feeding back from the socket send?
+            //Interlocked.CompareExchange(ref _readerCompletedException, exception, null);
+            //_readerCompleted.Cancel(throwOnFirstException: false);
         }
 
         public override void OnReaderCompleted(Action<Exception, object> callback, object state)
