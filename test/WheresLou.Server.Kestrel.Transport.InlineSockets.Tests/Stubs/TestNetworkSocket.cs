@@ -34,5 +34,10 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Stubs
         {
             throw new NotImplementedException();
         }
+
+        public void ShutdownSend()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

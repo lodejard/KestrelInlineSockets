@@ -17,6 +17,9 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         private readonly INetworkSocket _socket;
         private readonly CancellationTokenSource _readerCompleted;
         private readonly RollingMemory _buffer;
+
+        private bool _isCanceled;
+        private bool _isCompleted;
         private Exception _readerCompletedException;
 
         public ConnectionPipeWriter(
@@ -30,6 +33,10 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             _readerCompleted = new CancellationTokenSource();
             _buffer = new RollingMemory(_context.Options.MemoryPool);
         }
+
+        public bool IsCanceled => _isCanceled;
+
+        public bool IsCompleted => _isCanceled || _isCompleted;
 
         public override Memory<byte> GetMemory(int sizeHint)
         {
@@ -59,25 +66,25 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             }
             catch (Exception ex)
             {
-                // TODO: should this re-throw, or should it fall through to return IsCompleted true instead?
+                _isCompleted = true;
                 FireReaderCompleted(ex);
-                throw;
             }
 
             return new ValueTask<FlushResult>(new FlushResult(
-                isCanceled: false,
-                isCompleted: false));
+                isCanceled: IsCanceled,
+                isCompleted: IsCompleted));
         }
 
         public override void CancelPendingFlush()
         {
-            throw new NotImplementedException();
+            _isCanceled = true;
         }
 
         public override void Complete(Exception exception = null)
         {
             _context.Logger.LogTrace(exception, "TODO: PipeWriterComplete");
 
+            _isCompleted = true;
             _connection.OnPipeWriterComplete(exception);
         }
 

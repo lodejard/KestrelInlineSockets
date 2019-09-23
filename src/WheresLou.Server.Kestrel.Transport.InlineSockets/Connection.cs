@@ -29,9 +29,9 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         private readonly EndPoint _socketLocalEndPoint;
         private string _connectionId;
         private IDuplexPipe _applicationDuplexPipe;
-#pragma warning disable IDE0052 // Remove unread private members
-        private IDuplexPipe _transportDuplexPipe;
-#pragma warning restore IDE0052 // Remove unread private members
+        private object _synchronizeCompletion = new object();
+        private bool _pipeWriterComplete;
+        private bool _pipeReaderComplete;
 
         public Connection(
             ConnectionContext<Connection> context,
@@ -55,6 +55,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
             // this mechanism triggers when the connection tranceiving is entirely complete. used for cleanup. associated with abort.
             ConnectionClosed = _connectionClosedTokenSource.Token;
+            ConnectionClosed.Register(() => _context.Logger.LogTrace("TODO: ConnectionClosed"));
         }
 
         public override IFeatureCollection Features => this;
@@ -128,7 +129,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         IDuplexPipe IConnectionTransportFeature.Transport
         {
             get => this;
-            set => _transportDuplexPipe = value;
+            set { }
         }
 
         MemoryPool<byte> IMemoryPoolFeature.MemoryPool => _context.Options.MemoryPool;
@@ -157,6 +158,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         void IDisposable.Dispose()
         {
+            _context.Logger.LogTrace("TODO: Connection Disposed {ConnectionId}", _connectionId);
+
             _socket.Dispose();
             _connectionCloseRequestedTokenSource.Dispose();
             _connectionClosedTokenSource.Dispose();
@@ -164,7 +167,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public void OnCloseRequested()
         {
-            _context.Logger.LogDebug("TODO: CloseRequested");
+            _context.Logger.LogDebug("TODO: CloseRequested {ConnectionId}", _connectionId);
 
             // signal close has been requested
             _connectionCloseRequestedTokenSource.Cancel(throwOnFirstException: false);
@@ -172,7 +175,10 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public void OnAbortRequested(ConnectionAbortedException abortReason)
         {
-            _context.Logger.LogDebug("TODO: AbortRequested");
+            _context.Logger.LogDebug("TODO: AbortRequested {ConnectionId}", _connectionId);
+
+            // stop any additional data from arriving
+            _connectionPipeReader.CancelPendingRead();
         }
 
         public override void Abort()
@@ -202,21 +208,48 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             OnCloseRequested();
         }
 
-        Task IConnection.TranceiveAsync()
-        {
-            // TODO: doesn't appear that the connection itself needs to do any connection-long work
-            return Task.CompletedTask;
-        }
-
         void IConnection.OnPipeReaderComplete(Exception exception)
         {
-            // TODO: does this call also need to happen before the connection is clear to dispose?
+            OnPipeComplete(pipeReaderComplete: true);
         }
 
         void IConnection.OnPipeWriterComplete(Exception exception)
         {
-            // signal that the connection is clear to be disposed
-            _connectionClosedTokenSource.Cancel(throwOnFirstException: false);
+            OnPipeComplete(pipeWriterComplete: true);
+        }
+
+        private void OnPipeComplete(
+            bool pipeReaderComplete = false,
+            bool pipeWriterComplete = false)
+        {
+            var connectionClosed = false;
+            var readerRemaining = false;
+            lock (_synchronizeCompletion)
+            {
+                if (pipeReaderComplete)
+                {
+                    _pipeReaderComplete = true;
+                }
+
+                if (pipeWriterComplete)
+                {
+                    _pipeWriterComplete = true;
+                }
+
+                connectionClosed = _pipeReaderComplete && _pipeWriterComplete;
+                readerRemaining = (_pipeReaderComplete == false) && _pipeWriterComplete;
+            }
+
+            if (connectionClosed)
+            {
+                // signal all tranceiving is complete
+                _connectionClosedTokenSource.Cancel(throwOnFirstException: false);
+            }
+            else if (readerRemaining)
+            {
+                // this is necessary for Kestrel to realize the connection has ended
+                _connectionPipeReader.CancelPendingRead();
+            }
         }
     }
 }

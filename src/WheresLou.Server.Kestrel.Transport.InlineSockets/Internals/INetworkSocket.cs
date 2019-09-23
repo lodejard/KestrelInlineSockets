@@ -17,6 +17,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Internals
 
         int Send(ReadOnlySequence<byte> buffers);
 
+        void ShutdownSend();
+
         Task<int> ReceiveAsync(Memory<byte> buffers, CancellationToken cancellationToken);
 
         void CancelPendingRead();

@@ -61,25 +61,32 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
                 if (!IsCompleted)
                 {
                     var memory = _buffer.GetTrailingMemory();
+
+                    _context.Logger.LogTrace("TODO: ReadStarting");
                     var bytes = await _socket.ReceiveAsync(memory, cancellationToken);
+                    _context.Logger.LogTrace("TODO: ReadComplete {bytes}", bytes);
+
                     if (bytes != 0)
                     {
                         var text = Encoding.UTF8.GetString(memory.Slice(0, bytes).ToArray());
                         _bufferHasUnexaminedData = true;
                         _buffer.TrailingMemoryFilled(bytes);
                     }
+                    else
+                    {
+                        _isCompleted = true;
+                    }
                 }
             }
             catch (TaskCanceledException)
             {
+                _context.Logger.LogTrace("TODO: ReadCanceled");
                 _isCanceled = true;
             }
             catch (Exception ex)
             {
+                _context.Logger.LogTrace("TODO: ReadFailed");
                 FireWriterCompleted(ex);
-
-                // TODO: return isCompleted true instead of throwing error back to caller?
-                throw;
             }
 
             return new ReadResult(

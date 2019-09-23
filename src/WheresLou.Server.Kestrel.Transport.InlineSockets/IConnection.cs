@@ -11,8 +11,6 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
     {
         TransportConnection TransportConnection { get; }
 
-        Task TranceiveAsync();
-
         void OnPipeReaderComplete(Exception exception);
 
         void OnPipeWriterComplete(Exception exception);

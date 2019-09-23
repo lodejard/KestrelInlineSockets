@@ -113,26 +113,14 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             var connection = _context.ConnectionFactory.CreateConnection(socket);
             try
             {
-                // 1. get onconnection incomplete task
-                var dispatcherTask = _connectionDispatcher.OnConnection(connection.TransportConnection);
+                _context.Logger.LogTrace("TODO: Connection dispatch starting");
 
-                try
-                {
-                    // 2. get tranceiving incomplete task
-                    var tranceiveTask = connection.TranceiveAsync();
+                await _connectionDispatcher.OnConnection(connection.TransportConnection);
 
-                    // 3. await tranceiving task
-                    await tranceiveTask;
-                }
-                finally
-                {
-                    // 4. await onconnection task
-                    await dispatcherTask;
-                }
+                _context.Logger.LogTrace("TODO: Connection dispatch complete");
             }
             finally
             {
-                // 5. dispose connection
                 connection.Dispose();
             }
         }

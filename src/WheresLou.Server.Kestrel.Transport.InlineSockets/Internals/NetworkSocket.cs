@@ -140,5 +140,10 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Internals
 
             return _socket.Send(segments, SocketFlags.None);
         }
+
+        public void ShutdownSend()
+        {
+            _socket.Shutdown(SocketShutdown.Send);
+        }
     }
 }
