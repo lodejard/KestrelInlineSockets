@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>WheresLou.Server.Kestrel.Transport.InlineSockets.Tests</name>
+    </assembly>
+    <members>
+    </members>
+</doc>

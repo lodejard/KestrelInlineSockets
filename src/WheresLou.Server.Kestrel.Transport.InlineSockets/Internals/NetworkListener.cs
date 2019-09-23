@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 using System.Net.Sockets;
 using System.Threading.Tasks;
 
@@ -57,6 +60,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Internals
             {
                 socket.NoDelay = _socketNoDelay.Value;
             }
+
             return new NetworkSocket(socket);
         }
     }

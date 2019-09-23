@@ -1,11 +1,11 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Internal;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Fixtures
@@ -23,6 +23,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Fixtures
                 .AddSingleton<IServer, KestrelServer>()
                 .BuildServiceProvider();
         }
+
         public void Dispose()
         {
             _serviceProvider.Dispose();

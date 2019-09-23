@@ -1,11 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using WheresLou.Server.Kestrel.Transport.InlineSockets;
-using WheresLou.Server.Kestrel.Transport.InlineSockets.Factories;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
 
 namespace Microsoft.Extensions.DependencyInjection
@@ -19,7 +17,6 @@ namespace Microsoft.Extensions.DependencyInjection
                 .AddTransient<ITransportFactory, TransportFactory>()
                 .AddTransient<IConnectionFactory, ConnectionFactory>()
                 .AddTransient<INetworkProvider, NetworkProvider>();
-                ;
         }
     }
 }

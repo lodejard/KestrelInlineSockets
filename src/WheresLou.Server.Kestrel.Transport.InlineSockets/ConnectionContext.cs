@@ -1,8 +1,7 @@
-using System.Buffers;
-using System.Net.Sockets;
-using System.Threading;
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 using Microsoft.Extensions.Logging;
-using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
@@ -16,7 +15,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             Options = options;
         }
 
-        public ILogger<TCategoryName> Logger{get;}
+        public ILogger<TCategoryName> Logger { get; }
+
         public InlineSocketsTransportOptions Options { get; }
     }
 }

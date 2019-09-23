@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 using System;
 using System.Buffers;
 using System.Runtime.InteropServices;
@@ -12,12 +15,12 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         private RollingMemorySegment _lastSegment;
         private int _lastIndex;
 
-        public bool Empty => _firstSegment == _lastSegment && _firstIndex == _lastIndex;
-
         public RollingMemory(MemoryPool<byte> memoryPool)
         {
             _memoryPool = memoryPool;
         }
+
+        public bool IsEmpty => _firstSegment == _lastSegment && _firstIndex == _lastIndex;
 
         public ReadOnlySequence<byte> GetOccupiedMemory()
         {
@@ -32,6 +35,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             {
                 DisposeFirstSegment();
             }
+
             _firstIndex = consumedInteger;
 
             if (_firstSegment != _lastSegment && _firstIndex == _firstSegment.Memory.Length)
@@ -62,7 +66,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             }
         }
 
-        private void DisposeFirstSegment()
+        public void DisposeFirstSegment()
         {
             var consumedSegment = _firstSegment;
             _firstSegment = consumedSegment.Next;
@@ -85,7 +89,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
             // special case, all occupied memory has been consumed.
             // drop both index to 0 so the entire page becomes trailing memory again.
-            if (Empty)
+            if (IsEmpty)
             {
                 _firstIndex = 0;
                 _lastIndex = 0;
@@ -110,14 +114,14 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public bool HasUnexaminedData(SequencePosition examined)
         {
-            if (Empty)
+            if (IsEmpty)
             {
                 return false;
             }
 
             var examinedObject = examined.GetObject();
             var examinedInteger = examined.GetInteger();
-            if (ReferenceEquals(examinedObject, _lastSegment) && 
+            if (ReferenceEquals(examinedObject, _lastSegment) &&
                 examinedInteger == _lastIndex)
             {
                 return false;

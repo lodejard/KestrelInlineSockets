@@ -1,6 +1,8 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 using System;
 using System.IO.Pipelines;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -16,7 +18,6 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         private readonly CancellationTokenSource _readerCompleted;
         private readonly RollingMemory _buffer;
         private Exception _readerCompletedException;
-
 
         public ConnectionPipeWriter(
             ConnectionContext<ConnectionPipeWriter> context,
@@ -47,11 +48,20 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public override ValueTask<FlushResult> FlushAsync(CancellationToken cancellationToken)
         {
-            while (!_buffer.Empty)
+            try
             {
-                var memory = _buffer.GetOccupiedMemory();
-                var bytes = _socket.Send(memory);
-                _buffer.ConsumeOccupiedMemory(bytes);
+                while (!_buffer.IsEmpty)
+                {
+                    var memory = _buffer.GetOccupiedMemory();
+                    var bytes = _socket.Send(memory);
+                    _buffer.ConsumeOccupiedMemory(bytes);
+                }
+            }
+            catch (Exception ex)
+            {
+                // TODO: should this re-throw, or should it fall through to return IsCompleted true instead?
+                FireReaderCompleted(ex);
+                throw;
             }
 
             return new ValueTask<FlushResult>(new FlushResult(
@@ -74,6 +84,12 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         public override void OnReaderCompleted(Action<Exception, object> callback, object state)
         {
             _readerCompleted.Token.Register(() => callback(_readerCompletedException, state));
+        }
+
+        private void FireReaderCompleted(Exception exception)
+        {
+            _readerCompletedException = exception;
+            _readerCompleted.Cancel();
         }
     }
 }

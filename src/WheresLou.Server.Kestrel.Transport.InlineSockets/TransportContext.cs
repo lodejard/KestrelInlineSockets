@@ -1,7 +1,7 @@
-using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 using Microsoft.Extensions.Logging;
-using System.Buffers;
-using WheresLou.Server.Kestrel.Transport.InlineSockets.Factories;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
@@ -12,7 +12,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             ILogger<Transport> logger,
             InlineSocketsTransportOptions options,
             INetworkProvider networkProvider,
-            IConnectionFactory connectionFactory) 
+            IConnectionFactory connectionFactory)
         {
             Logger = logger;
             Options = options;
@@ -21,8 +21,11 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         }
 
         public ILogger<Transport> Logger { get; }
+
         public InlineSocketsTransportOptions Options { get; }
+
         public INetworkProvider NetworkProvider { get; }
+
         public IConnectionFactory ConnectionFactory { get; }
     }
 }

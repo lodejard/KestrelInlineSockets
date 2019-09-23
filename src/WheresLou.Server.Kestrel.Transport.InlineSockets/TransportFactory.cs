@@ -1,8 +1,9 @@
-using System.Buffers;
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using WheresLou.Server.Kestrel.Transport.InlineSockets.Factories;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
@@ -25,12 +26,12 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         }
 
         public virtual ITransport Create(
-            IEndPointInformation endPointInformation, 
+            IEndPointInformation endPointInformation,
             IConnectionDispatcher connectionDispatcher)
         {
             return new Transport(
-                _context, 
-                endPointInformation, 
+                _context,
+                endPointInformation,
                 connectionDispatcher);
         }
     }

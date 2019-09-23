@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,7 +22,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Fixtures
                     typeof(LoggerProvider).FullName,
                     null,
                     LogLevel.Trace,
-                    (_, __, ___) => true));
+                    (providerName, categoryName, logLevel) => true));
             });
         }
 
@@ -39,7 +42,6 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Fixtures
                 Message = message,
             });
         }
-
 
         public class LoggerProvider : ILoggerProvider
         {
@@ -97,10 +99,15 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Fixtures
         public class LogItem
         {
             public string CategoryName { get; internal set; }
+
             public LogLevel LogLevel { get; internal set; }
+
             public EventId EventId { get; internal set; }
+
             public Exception Exception { get; internal set; }
+
             public string Message { get; internal set; }
+
             public object Properties { get; internal set; }
 
             public override string ToString()

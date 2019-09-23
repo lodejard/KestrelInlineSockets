@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 using System;
 using System.Buffers;
 using System.Net;
@@ -9,10 +12,13 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Internals
     public interface INetworkSocket : IDisposable
     {
         EndPoint LocalEndPoint { get; }
+
         EndPoint RemoteEndPoint { get; }
 
         int Send(ReadOnlySequence<byte> buffers);
+
         Task<int> ReceiveAsync(Memory<byte> buffers, CancellationToken cancellationToken);
+
         void CancelPendingRead();
     }
 }

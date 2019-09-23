@@ -1,6 +1,8 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 using System;
 using System.Buffers;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Net;
@@ -11,12 +13,11 @@ using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
 using Microsoft.Extensions.Logging;
-using WheresLou.Server.Kestrel.Transport.InlineSockets.Factories;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
-    public partial class Connection : TransportConnection, IConnection, IDuplexPipe, IHttpConnectionFeature, IConnectionIdFeature, IConnectionTransportFeature, IConnectionItemsFeature, IMemoryPoolFeature, IApplicationTransportFeature, ITransportSchedulerFeature, IConnectionLifetimeFeature, IConnectionHeartbeatFeature, IConnectionLifetimeNotificationFeature //, IFeatureCollection, IEnumerable<KeyValuePair<Type, object>>, IEnumerable
+    public partial class Connection : TransportConnection, IConnection, IDuplexPipe, IHttpConnectionFeature, IConnectionIdFeature, IConnectionTransportFeature, IMemoryPoolFeature, IApplicationTransportFeature, ITransportSchedulerFeature, IConnectionLifetimeFeature, IConnectionHeartbeatFeature, IConnectionLifetimeNotificationFeature
     {
         private readonly ConnectionContext<Connection> _context;
         private readonly INetworkSocket _socket;
@@ -49,34 +50,11 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             _socketLocalEndPoint = _socket.LocalEndPoint;
 
             // this mechanism propogates a server-wide request for graceful shutdown. it is received by the http1/2 framing layer.
-            base.ConnectionClosedRequested.Register(OnCloseRequested);
-            base.ConnectionClosedRequested = _connectionCloseRequestedTokenSource.Token;
+            ConnectionClosedRequested.Register(OnCloseRequested);
+            ConnectionClosedRequested = _connectionCloseRequestedTokenSource.Token;
 
             // this mechanism triggers when the connection tranceiving is entirely complete. used for cleanup. associated with abort.
-            base.ConnectionClosed = _connectionClosedTokenSource.Token;
-        }
-
-        void IDisposable.Dispose()
-        {
-            _socket.Dispose();
-            _connectionCloseRequestedTokenSource.Dispose();
-            _connectionClosedTokenSource.Dispose();
-        }
-
-
-        private void OnCloseRequested()
-        {
-            _context.Logger.LogDebug("TODO: CloseRequested");
-
-            // signal close has been requested
-            _connectionCloseRequestedTokenSource.Cancel(throwOnFirstException: false);
-        }
-
-        private void OnAbortRequested(ConnectionAbortedException abortReason)
-        {
-            _context.Logger.LogDebug("TODO: AbortRequested");
-
-            //throw new NotImplementedException();
+            ConnectionClosed = _connectionClosedTokenSource.Token;
         }
 
         public override IFeatureCollection Features => this;
@@ -153,12 +131,6 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             set => _transportDuplexPipe = value;
         }
 
-        IDictionary<object, object> IConnectionItemsFeature.Items
-        {
-            get => throw new NotImplementedException();
-            set => throw new NotImplementedException();
-        }
-
         MemoryPool<byte> IMemoryPoolFeature.MemoryPool => _context.Options.MemoryPool;
 
         IDuplexPipe IApplicationTransportFeature.Application
@@ -183,6 +155,26 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             set => throw new NotImplementedException();
         }
 
+        void IDisposable.Dispose()
+        {
+            _socket.Dispose();
+            _connectionCloseRequestedTokenSource.Dispose();
+            _connectionClosedTokenSource.Dispose();
+        }
+
+        public void OnCloseRequested()
+        {
+            _context.Logger.LogDebug("TODO: CloseRequested");
+
+            // signal close has been requested
+            _connectionCloseRequestedTokenSource.Cancel(throwOnFirstException: false);
+        }
+
+        public void OnAbortRequested(ConnectionAbortedException abortReason)
+        {
+            _context.Logger.LogDebug("TODO: AbortRequested");
+        }
+
         public override void Abort()
         {
             OnAbortRequested(null);
@@ -202,7 +194,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         {
             // this method must be delegated to the base implementation because private fields and
             // non-virtual public methods prevent the implementation from being controlled
-            base.OnHeartbeat(action, state);
+            OnHeartbeat(action, state);
         }
 
         void IConnectionLifetimeNotificationFeature.RequestClose()

@@ -1,18 +1,18 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Hosting.Server;
-using WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Fixtures;
-using Xunit;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Http.Features;
-using System.Threading;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Microsoft.Extensions.Options;
-using System.Net.Http;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.DependencyInjection;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Fixtures;
+using Xunit;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
 {
@@ -121,6 +121,5 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
                 await server.StopAsync(timeout.Token);
             }
         }
-
     }
 }

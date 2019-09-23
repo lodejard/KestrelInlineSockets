@@ -1,16 +1,16 @@
-using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
-using Microsoft.Extensions.Logging;
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 using System;
-using System.Diagnostics;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using WheresLou.Server.Kestrel.Transport.InlineSockets.Factories;
+using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
+using Microsoft.Extensions.Logging;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
-
     public class Transport : ITransport
     {
         private readonly TransportContext _context;

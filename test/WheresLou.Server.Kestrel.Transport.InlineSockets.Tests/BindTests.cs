@@ -1,13 +1,16 @@
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
-using WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Fixtures;
-using Xunit;
-using Microsoft.Extensions.DependencyInjection;
-using WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Stubs;
-using System.Net.Sockets;
-using System.Net;
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 using System;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
+using Microsoft.Extensions.DependencyInjection;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Fixtures;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Stubs;
+using Xunit;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
 {

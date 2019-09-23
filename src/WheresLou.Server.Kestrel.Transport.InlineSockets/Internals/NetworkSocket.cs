@@ -1,4 +1,7 @@
-﻿using System;
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Net;
@@ -86,7 +89,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Internals
             }
         }
 
-        private void ReceiveAsyncCompleted(object sender, SocketAsyncEventArgs e)
+        public void ReceiveAsyncCompleted(object sender, SocketAsyncEventArgs e)
         {
             TaskCompletionSource<int> receiveAsyncTaskSource;
             SocketError socketError;
@@ -134,6 +137,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Internals
                 MemoryMarshal.TryGetArray(buffer, out var segment);
                 segments.Add(segment);
             }
+
             return _socket.Send(segments, SocketFlags.None);
         }
     }

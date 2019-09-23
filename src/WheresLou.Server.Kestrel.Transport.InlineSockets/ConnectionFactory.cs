@@ -1,11 +1,12 @@
-using System.Buffers;
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 using System.IO.Pipelines;
-using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
 
-namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Factories
+namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
     public class ConnectionFactory : IConnectionFactory
     {
@@ -41,7 +42,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Factories
             IConnection connection,
             INetworkSocket socket)
         {
-            return new ConnectionPipeReader(new ConnectionContext<ConnectionPipeReader>(
+            return new ConnectionPipeReader(
+                new ConnectionContext<ConnectionPipeReader>(
                     _connectionPipeReaderLogger,
                     _options.Value),
                 connection,
@@ -49,10 +51,11 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Factories
         }
 
         public virtual PipeWriter CreatePipeWriter(
-            IConnection connection, 
+            IConnection connection,
             INetworkSocket socket)
         {
-            return new ConnectionPipeWriter(new ConnectionContext<ConnectionPipeWriter>(
+            return new ConnectionPipeWriter(
+                new ConnectionContext<ConnectionPipeWriter>(
                     _connectionPipeWriterLogger,
                     _options.Value),
                 connection,

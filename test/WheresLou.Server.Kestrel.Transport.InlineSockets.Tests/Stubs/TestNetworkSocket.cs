@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 using System;
 using System.Buffers;
 using System.Net;
@@ -12,7 +15,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Stubs
         public EndPoint LocalEndPoint { get; set; }
 
         public EndPoint RemoteEndPoint { get; set; }
-        public bool IsDisposed { get;  set; }
+
+        public bool IsDisposed { get; set; }
 
         public void Dispose() => IsDisposed = true;
 

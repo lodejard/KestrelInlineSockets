@@ -1,7 +1,8 @@
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+
 using System;
-using System.Buffers;
 using System.IO.Pipelines;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,7 +11,6 @@ using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
-
     public class ConnectionPipeReader : PipeReader
     {
         private readonly ConnectionContext<ConnectionPipeReader> _context;
@@ -24,11 +24,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         private bool _isCompleted;
         private Exception _writerCompletedException;
 
-        public bool IsCanceled => _isCanceled;
-        public bool IsCompleted => _isCanceled || _isCompleted;
-
         public ConnectionPipeReader(
-            ConnectionContext<ConnectionPipeReader> context, 
+            ConnectionContext<ConnectionPipeReader> context,
             IConnection connection,
             INetworkSocket socket)
         {
@@ -38,6 +35,10 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             _writerCompleted = new CancellationTokenSource();
             _buffer = new RollingMemory(_context.Options.MemoryPool);
         }
+
+        public bool IsCanceled => _isCanceled;
+
+        public bool IsCompleted => _isCanceled || _isCompleted;
 
         public override bool TryRead(out ReadResult result)
         {
@@ -68,19 +69,15 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
                         _buffer.TrailingMemoryFilled(bytes);
                     }
                 }
-                else
-                {
-                    var x = 5;
-                }
             }
             catch (TaskCanceledException)
             {
                 _isCanceled = true;
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                _writerCompletedException = ex;
-                // TODO: also fire OnWriterCompleted callbacks?
+                FireWriterCompleted(ex);
+
                 // TODO: return isCompleted true instead of throwing error back to caller?
                 throw;
             }
@@ -121,6 +118,12 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         public override void OnWriterCompleted(Action<Exception, object> callback, object state)
         {
             _writerCompleted.Token.Register(() => callback(_writerCompletedException, state));
+        }
+
+        public void FireWriterCompleted(Exception exception)
+        {
+            _writerCompletedException = exception;
+            _writerCompleted.Cancel();
         }
     }
 }
