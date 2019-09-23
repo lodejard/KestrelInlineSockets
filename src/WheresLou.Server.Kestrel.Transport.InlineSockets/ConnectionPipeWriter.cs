@@ -4,24 +4,30 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
     public class ConnectionPipeWriter : PipeWriter
     {
-        private readonly ILogger<ConnectionPipeWriter> _logger;
-        private readonly ConnectionContext _context;
+        private readonly ConnectionContext<ConnectionPipeWriter> _context;
+        private readonly IConnection _connection;
+        private readonly INetworkSocket _socket;
         private readonly CancellationTokenSource _readerCompleted;
         private readonly RollingMemory _buffer;
         private Exception _readerCompletedException;
 
 
-        public ConnectionPipeWriter(ILogger<ConnectionPipeWriter> logger, ConnectionContext context)
+        public ConnectionPipeWriter(
+            ConnectionContext<ConnectionPipeWriter> context,
+            IConnection connection,
+            INetworkSocket socket)
         {
-            _logger = logger;
             _context = context;
+            _connection = connection;
+            _socket = socket;
             _readerCompleted = new CancellationTokenSource();
-            _buffer = new RollingMemory(context.MemoryPool);
+            _buffer = new RollingMemory(_context.Options.MemoryPool);
         }
 
         public override Memory<byte> GetMemory(int sizeHint)
@@ -44,7 +50,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             while (!_buffer.Empty)
             {
                 var memory = _buffer.GetOccupiedMemory();
-                var bytes = _context.Socket.Send(memory);
+                var bytes = _socket.Send(memory);
                 _buffer.ConsumeOccupiedMemory(bytes);
             }
 
@@ -60,12 +66,9 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public override void Complete(Exception exception = null)
         {
-            // TODO: verify this is the correct order of operations
-            _context.ConnectionClosed.Cancel();
+            _context.Logger.LogTrace(exception, "TODO: PipeWriterComplete");
 
-            // TODO: is this complete the writer? or the "reader" feeding back from the socket send?
-            //Interlocked.CompareExchange(ref _readerCompletedException, exception, null);
-            //_readerCompleted.Cancel(throwOnFirstException: false);
+            _connection.OnPipeWriterComplete(exception);
         }
 
         public override void OnReaderCompleted(Action<Exception, object> callback, object state)

@@ -6,31 +6,37 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
 
     public class ConnectionPipeReader : PipeReader
     {
-        private readonly ILogger<ConnectionPipeReader> _logger;
-        private readonly ConnectionContext _context;
+        private readonly ConnectionContext<ConnectionPipeReader> _context;
+        private readonly IConnection _connection;
+        private readonly INetworkSocket _socket;
         private readonly CancellationTokenSource _writerCompleted;
         private readonly RollingMemory _buffer;
 
-        private Exception _writerCompletedException;
-
         private bool _bufferHasUnexaminedData;
         private bool _isCanceled;
+        private bool _isCompleted;
+        private Exception _writerCompletedException;
 
         public bool IsCanceled => _isCanceled;
-        public bool IsCompleted => _isCanceled || _writerCompleted.IsCancellationRequested;
+        public bool IsCompleted => _isCanceled || _isCompleted;
 
-        public ConnectionPipeReader(ILogger<ConnectionPipeReader> logger, ConnectionContext context)
+        public ConnectionPipeReader(
+            ConnectionContext<ConnectionPipeReader> context, 
+            IConnection connection,
+            INetworkSocket socket)
         {
-            _logger = logger;
             _context = context;
+            _connection = connection;
+            _socket = socket;
             _writerCompleted = new CancellationTokenSource();
-            _buffer = new RollingMemory(_context.MemoryPool);
+            _buffer = new RollingMemory(_context.Options.MemoryPool);
         }
 
         public override bool TryRead(out ReadResult result)
@@ -54,7 +60,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
                 if (!IsCompleted)
                 {
                     var memory = _buffer.GetTrailingMemory();
-                    var bytes = await _context.Socket.ReceiveAsync(memory, cancellationToken);
+                    var bytes = await _socket.ReceiveAsync(memory, cancellationToken);
                     if (bytes != 0)
                     {
                         var text = Encoding.UTF8.GetString(memory.Slice(0, bytes).ToArray());
@@ -70,6 +76,13 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             catch (TaskCanceledException)
             {
                 _isCanceled = true;
+            }
+            catch(Exception ex)
+            {
+                _writerCompletedException = ex;
+                // TODO: also fire OnWriterCompleted callbacks?
+                // TODO: return isCompleted true instead of throwing error back to caller?
+                throw;
             }
 
             return new ReadResult(
@@ -92,14 +105,17 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public override void CancelPendingRead()
         {
-            _context.Socket.CancelPendingRead();
+            _context.Logger.LogTrace("TODO: CancelPendingRead");
+
+            _socket.CancelPendingRead();
         }
 
         public override void Complete(Exception exception)
         {
-            // TODO: the semantics of this seem to be that the **reader** (the http server) is complete --- it does not indicate that a fin was received from the client
-            //Interlocked.CompareExchange(ref _writerCompletedException, exception, null);
-            //_writerCompleted.Cancel(throwOnFirstException: false);
+            _context.Logger.LogTrace(exception, "TODO: PipeReaderComplete");
+
+            _isCompleted = true;
+            _connection.OnPipeReaderComplete(exception);
         }
 
         public override void OnWriterCompleted(Action<Exception, object> callback, object state)

@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Options;
 using System.Net.Http;
 using System.Diagnostics;
+using System.IO;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
 {
@@ -101,7 +102,14 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
 
                     response.Headers["Content-Type"] = "text/plain";
 
-                    await request.Body.CopyToAsync(response.Body);
+                    using (var reader = new StreamReader(request.Body))
+                    {
+                        var text = reader.ReadToEnd();
+                        using (var writer = new StreamWriter(response.Body))
+                        {
+                            writer.Write(text);
+                        }
+                    }
                 };
 
                 await server.StartAsync(app, timeout.Token);

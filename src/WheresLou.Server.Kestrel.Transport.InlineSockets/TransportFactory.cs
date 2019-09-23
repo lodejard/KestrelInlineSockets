@@ -20,7 +20,6 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             _context = new TransportContext(
                 logger,
                 options.Value,
-                KestrelMemoryPool.Create(),
                 networkProvider,
                 connectionFactory);
         }

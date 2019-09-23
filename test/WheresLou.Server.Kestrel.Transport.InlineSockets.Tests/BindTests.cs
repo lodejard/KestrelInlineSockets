@@ -16,7 +16,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
         [Fact]
         public async Task BindCreatesSocketWhichAcceptsConnection()
         {
-            using (var services = new ServicesFixture())
+            using (var logging = new LoggingFixture())
+            using (var services = new ServicesFixture(logging))
             using (var ep = new EndPointFixture())
             {
                 var transportFactory = services.GetService<ITransportFactory>();

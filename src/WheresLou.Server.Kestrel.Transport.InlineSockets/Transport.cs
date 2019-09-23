@@ -53,13 +53,19 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public async Task UnbindAsync()
         {
-            _acceptLoopTokenSource.Cancel();
+            _context.Logger.LogDebug(new EventId(2, "UnbindListenSocket"), "Unbinding listen socket from {IPEndPoint}", _endPointInformation.IPEndPoint);
+
+            _acceptLoopTokenSource.Cancel(throwOnFirstException: false);
             _listener.Stop();
             await _acceptLoopTask;
+
+            _listener.Dispose();
+            _listener = null;
         }
 
         public Task StopAsync()
         {
+            _context.Logger.LogDebug(new EventId(3, "StopTransport"), "Inline sockets transport is stopped.");
             return Task.CompletedTask;
         }
 
@@ -76,15 +82,16 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
                     var task = Task.Run(() => ProcessSocketAsync(socket, cancellationToken));
 
                     // TODO: need better way to ensure pending tasks complete before this method returns?
+                    // for now, fire-and-forget async method will at least observe and log exceptions
                     HandleErrors(task);
                 }
                 catch (SocketException ex) when (ex.SocketErrorCode == SocketError.OperationAborted)
                 {
-                    // listen socket closed
+                    // normal exception: listen socket closed
                 }
                 catch (ObjectDisposedException)
                 {
-                    // listen socket closed
+                    // normal exception: listen socket closed
                 }
             }
         }
@@ -103,36 +110,30 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public async Task ProcessSocketAsync(INetworkSocket socket, CancellationToken cancellationToken)
         {
-            var connectionClosedTokenSource = new CancellationTokenSource();
+            var connection = _context.ConnectionFactory.CreateConnection(socket);
             try
             {
-                var connectionContext = new ConnectionContext(
-                    _context.MemoryPool,
-                    socket,
-                    connectionClosedTokenSource);
-
-                var connection = _context.ConnectionFactory.Create(connectionContext);
-
                 // 1. get onconnection incomplete task
                 var dispatcherTask = _connectionDispatcher.OnConnection(connection.TransportConnection);
 
                 try
                 {
                     // 2. get tranceiving incomplete task
+                    var tranceiveTask = connection.TranceiveAsync();
+
                     // 3. await tranceiving task
-                    // await connection.TranceiveAsync();
+                    await tranceiveTask;
                 }
                 finally
                 {
                     // 4. await onconnection task
                     await dispatcherTask;
-                    Console.WriteLine("dispatcherTask completed");
                 }
             }
             finally
             {
                 // 5. dispose connection
-                connectionClosedTokenSource.Dispose();
+                connection.Dispose();
             }
         }
     }

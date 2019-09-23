@@ -18,52 +18,64 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
     public partial class Connection : TransportConnection, IConnection, IDuplexPipe, IHttpConnectionFeature, IConnectionIdFeature, IConnectionTransportFeature, IConnectionItemsFeature, IMemoryPoolFeature, IApplicationTransportFeature, ITransportSchedulerFeature, IConnectionLifetimeFeature, IConnectionHeartbeatFeature, IConnectionLifetimeNotificationFeature //, IFeatureCollection, IEnumerable<KeyValuePair<Type, object>>, IEnumerable
     {
-        private readonly ILogger<Connection> _logger;
-        private readonly INetworkProvider _networkProvider;
-        private readonly ConnectionContext _context;
+        private readonly ConnectionContext<Connection> _context;
+        private readonly INetworkSocket _socket;
+        private readonly CancellationTokenSource _connectionCloseRequestedTokenSource;
+        private readonly CancellationTokenSource _connectionClosedTokenSource;
         private readonly PipeReader _connectionPipeReader;
         private readonly PipeWriter _connectionPipeWriter;
-        private readonly CancellationTokenSource _connectionCloseRequestedTokenSource;
-
+        private readonly EndPoint _socketRemoteEndPoint;
+        private readonly EndPoint _socketLocalEndPoint;
         private string _connectionId;
         private IDuplexPipe _applicationDuplexPipe;
+#pragma warning disable IDE0052 // Remove unread private members
         private IDuplexPipe _transportDuplexPipe;
+#pragma warning restore IDE0052 // Remove unread private members
 
         public Connection(
-            ILogger<Connection> logger,
-            INetworkProvider networkProvider,
-            IConnectionPipeReaderFactory connectionPipeReaderFactory,
-            IConnectionPipeWriterFactory connectionPipeWriterFactory,
-            ConnectionContext context)
+            ConnectionContext<Connection> context,
+            IConnectionFactory connectionFactory,
+            INetworkSocket socket)
         {
-            _connectionCloseRequestedTokenSource = new CancellationTokenSource();
-            _logger = logger;
-            _networkProvider = networkProvider;
             _context = context;
-            _connectionPipeReader = connectionPipeReaderFactory.Create(context);
-            _connectionPipeWriter = connectionPipeWriterFactory.Create(context);
+            _socket = socket;
+            _connectionCloseRequestedTokenSource = new CancellationTokenSource();
+            _connectionClosedTokenSource = new CancellationTokenSource();
+            _connectionPipeReader = connectionFactory.CreatePipeReader(this, socket);
+            _connectionPipeWriter = connectionFactory.CreatePipeWriter(this, socket);
+
+            // preserving these values to avoid errors once the socket is closed
+            _socketRemoteEndPoint = _socket.RemoteEndPoint;
+            _socketLocalEndPoint = _socket.LocalEndPoint;
 
             // this mechanism propogates a server-wide request for graceful shutdown. it is received by the http1/2 framing layer.
-            base.ConnectionClosedRequested.Register(OnConnectionCloseRequested);
+            base.ConnectionClosedRequested.Register(OnCloseRequested);
             base.ConnectionClosedRequested = _connectionCloseRequestedTokenSource.Token;
-            _connectionCloseRequestedTokenSource.Token.Register(OnCloseRequested);
 
             // this mechanism triggers when the connection tranceiving is entirely complete. used for cleanup. associated with abort.
-            base.ConnectionClosed = _context.ConnectionClosed.Token;
-
-            void OnConnectionCloseRequested()
-            {
-                _connectionCloseRequestedTokenSource.Cancel();
-            }
+            base.ConnectionClosed = _connectionClosedTokenSource.Token;
         }
+
+        void IDisposable.Dispose()
+        {
+            _socket.Dispose();
+            _connectionCloseRequestedTokenSource.Dispose();
+            _connectionClosedTokenSource.Dispose();
+        }
+
 
         private void OnCloseRequested()
         {
-            //throw new NotImplementedException();
+            _context.Logger.LogDebug("TODO: CloseRequested");
+
+            // signal close has been requested
+            _connectionCloseRequestedTokenSource.Cancel(throwOnFirstException: false);
         }
 
         private void OnAbortRequested(ConnectionAbortedException abortReason)
         {
+            _context.Logger.LogDebug("TODO: AbortRequested");
+
             //throw new NotImplementedException();
         }
 
@@ -113,25 +125,25 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         IPAddress IHttpConnectionFeature.RemoteIpAddress
         {
-            get => ((IPEndPoint)_context.Socket.RemoteEndPoint).Address;
+            get => ((IPEndPoint)_socketRemoteEndPoint).Address;
             set => throw new NotImplementedException();
         }
 
         IPAddress IHttpConnectionFeature.LocalIpAddress
         {
-            get => ((IPEndPoint)_context.Socket.LocalEndPoint).Address;
+            get => ((IPEndPoint)_socketLocalEndPoint).Address;
             set => throw new NotImplementedException();
         }
 
         int IHttpConnectionFeature.RemotePort
         {
-            get => ((IPEndPoint)_context.Socket.RemoteEndPoint).Port;
+            get => ((IPEndPoint)_socketRemoteEndPoint).Port;
             set => throw new NotImplementedException();
         }
 
         int IHttpConnectionFeature.LocalPort
         {
-            get => ((IPEndPoint)_context.Socket.LocalEndPoint).Port;
+            get => ((IPEndPoint)_socketLocalEndPoint).Port;
             set => throw new NotImplementedException();
         }
 
@@ -147,7 +159,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             set => throw new NotImplementedException();
         }
 
-        MemoryPool<byte> IMemoryPoolFeature.MemoryPool => _context.MemoryPool;
+        MemoryPool<byte> IMemoryPoolFeature.MemoryPool => _context.Options.MemoryPool;
 
         IDuplexPipe IApplicationTransportFeature.Application
         {
@@ -161,7 +173,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         CancellationToken IConnectionLifetimeFeature.ConnectionClosed
         {
-            get => _context.ConnectionClosed.Token;
+            get => _connectionClosedTokenSource.Token;
             set => throw new NotImplementedException();
         }
 
@@ -195,13 +207,24 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         void IConnectionLifetimeNotificationFeature.RequestClose()
         {
-            // signal that a close has been requested
-            _connectionCloseRequestedTokenSource.Cancel();
+            OnCloseRequested();
         }
 
         Task IConnection.TranceiveAsync()
         {
-            throw new NotImplementedException();
+            // TODO: doesn't appear that the connection itself needs to do any connection-long work
+            return Task.CompletedTask;
+        }
+
+        void IConnection.OnPipeReaderComplete(Exception exception)
+        {
+            // TODO: does this call also need to happen before the connection is clear to dispose?
+        }
+
+        void IConnection.OnPipeWriterComplete(Exception exception)
+        {
+            // signal that the connection is clear to be disposed
+            _connectionClosedTokenSource.Cancel(throwOnFirstException: false);
         }
     }
 }

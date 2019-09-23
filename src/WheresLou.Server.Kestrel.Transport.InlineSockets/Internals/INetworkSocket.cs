@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Internals
 {
-    public interface INetworkSocket
+    public interface INetworkSocket : IDisposable
     {
         EndPoint LocalEndPoint { get; }
         EndPoint RemoteEndPoint { get; }
