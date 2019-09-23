@@ -10,10 +10,16 @@ pool:
   vmImage: 'ubuntu-latest'
 
 steps:
-- script: |
+- bash: |
+    set -e
     dotnet build
-    dotnet test
+    dotnet test --logger trx
     dotnet pack
   displayName: 'Build script'
   env:
     Configuration: Release
+
+- task: PublishTestResults@2
+  inputs:
+    testResultsFiles: '**/TestResults/*.trx'
+
