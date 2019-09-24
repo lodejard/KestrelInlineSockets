@@ -25,9 +25,8 @@ steps:
     testResultsFiles: '**/TestResults/*.trx'
 
 - task: NuGetCommand@2
-  # condition: and(succeeded(), eq(variables['Build.SourceBranchName'], 'master'))
+  condition: and(succeeded(), eq(variables['Build.SourceBranchName'], 'master'))
   inputs:
     command: push
-    nuGetFeedType: internal
     packagesToPush: '$(Build.SourcesDirectory)/**/bin/**/*.nupkg'
     publishVstsFeed: lodejard.KestrelInlineSockets
