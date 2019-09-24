@@ -29,5 +29,5 @@ steps:
   inputs:
     command: push
     nuGetFeedType: internal
-    packagesToPush: '**/bin/*.nupkg'
+    packagesToPush: '$(Build.SourcesDirectory)/**/bin/*.nupkg'
     publishVstsFeed: lodejard.KestrelInlineSockets
