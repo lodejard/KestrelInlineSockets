@@ -79,7 +79,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
                     _context.Logger.LogInformation(new EventId(5, "SocketAccepted"), "Socket accepted from {RemoteEndPoint} to {LocalEndPoint}", socket.RemoteEndPoint, socket.LocalEndPoint);
 
-                    var task = Task.Run(() => ProcessSocketAsync(socket, cancellationToken));
+                    var task = ProcessSocketAsyncSafe(socket, cancellationToken);
 
                     // TODO: need better way to ensure pending tasks complete before this method returns?
                     // for now, fire-and-forget async method will at least observe and log exceptions
@@ -108,16 +108,24 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             }
         }
 
+        public Task ProcessSocketAsyncSafe(INetworkSocket socket, CancellationToken cancellationToken)
+        {
+            try
+            {
+                return ProcessSocketAsync(socket, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                return Task.FromException(ex);
+            }
+        }
+
         public async Task ProcessSocketAsync(INetworkSocket socket, CancellationToken cancellationToken)
         {
             var connection = _context.ConnectionFactory.CreateConnection(socket);
             try
             {
-                _context.Logger.LogTrace("TODO: Connection dispatch starting");
-
                 await _connectionDispatcher.OnConnection(connection.TransportConnection);
-
-                _context.Logger.LogTrace("TODO: Connection dispatch complete");
             }
             finally
             {
