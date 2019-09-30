@@ -2,9 +2,9 @@
 // Licensed under the MIT license.
 
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Logging;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
@@ -13,7 +13,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         private readonly TransportContext _context;
 
         public TransportFactory(
-            ILogger<Transport> logger,
+            ITransportLogger logger,
             IOptions<InlineSocketsTransportOptions> options,
             INetworkProvider networkProvider,
             IConnectionFactory connectionFactory)

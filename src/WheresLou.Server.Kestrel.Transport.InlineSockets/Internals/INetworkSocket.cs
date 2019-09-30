@@ -11,9 +11,9 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Internals
 {
     public interface INetworkSocket : IDisposable
     {
-        EndPoint LocalEndPoint { get; }
+        IPEndPoint LocalEndPoint { get; }
 
-        EndPoint RemoteEndPoint { get; }
+        IPEndPoint RemoteEndPoint { get; }
 
         int Send(ReadOnlySequence<byte> buffers);
 

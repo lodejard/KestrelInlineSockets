@@ -12,7 +12,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
     public class ConnectionPipeWriter : PipeWriter
     {
-        private readonly ConnectionContext<ConnectionPipeWriter> _context;
+        private readonly ConnectionContext _context;
         private readonly IConnection _connection;
         private readonly INetworkSocket _socket;
         private readonly CancellationTokenSource _readerCompleted;
@@ -23,7 +23,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         private Exception _readerCompletedException;
 
         public ConnectionPipeWriter(
-            ConnectionContext<ConnectionPipeWriter> context,
+            ConnectionContext context,
             IConnection connection,
             INetworkSocket socket)
         {

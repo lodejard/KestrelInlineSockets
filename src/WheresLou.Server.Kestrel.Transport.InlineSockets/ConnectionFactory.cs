@@ -2,38 +2,30 @@
 // Licensed under the MIT license.
 
 using System.IO.Pipelines;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Logging;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
     public class ConnectionFactory : IConnectionFactory
     {
-        private readonly ILogger<Connection> _connectionLogger;
-        private readonly ILogger<ConnectionPipeReader> _connectionPipeReaderLogger;
-        private readonly ILogger<ConnectionPipeWriter> _connectionPipeWriterLogger;
-        private readonly IOptions<InlineSocketsTransportOptions> _options;
+        private readonly ConnectionContext _context;
 
         public ConnectionFactory(
-            ILogger<Connection> connectionLogger,
-            ILogger<ConnectionPipeReader> connectionPipeReaderLogger,
-            ILogger<ConnectionPipeWriter> connectionPipeWriterLogger,
+            IConnectionLogger connectionLogger,
             IOptions<InlineSocketsTransportOptions> options)
         {
-            _connectionLogger = connectionLogger;
-            _connectionPipeReaderLogger = connectionPipeReaderLogger;
-            _connectionPipeWriterLogger = connectionPipeWriterLogger;
-            _options = options;
+            _context = new ConnectionContext(
+                connectionLogger, 
+                options.Value);
         }
 
         public virtual IConnection CreateConnection(
             INetworkSocket socket)
         {
             return new Connection(
-                new ConnectionContext<Connection>(
-                    _connectionLogger,
-                    _options.Value),
+                _context,
                 this,
                 socket);
         }
@@ -43,9 +35,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             INetworkSocket socket)
         {
             return new ConnectionPipeReader(
-                new ConnectionContext<ConnectionPipeReader>(
-                    _connectionPipeReaderLogger,
-                    _options.Value),
+                _context,
                 connection,
                 socket);
         }
@@ -55,9 +45,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             INetworkSocket socket)
         {
             return new ConnectionPipeWriter(
-                new ConnectionContext<ConnectionPipeWriter>(
-                    _connectionPipeWriterLogger,
-                    _options.Value),
+                _context,
                 connection,
                 socket);
         }
