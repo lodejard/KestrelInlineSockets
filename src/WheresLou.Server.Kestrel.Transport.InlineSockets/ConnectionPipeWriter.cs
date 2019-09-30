@@ -66,6 +66,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             }
             catch (Exception ex)
             {
+                // Return FlushResult.IsCompleted == true from now on
+                // because we assume any write exceptions are not temporary
                 _isCompleted = true;
                 FireReaderCompleted(ex);
             }

@@ -86,6 +86,10 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             catch (Exception ex)
             {
                 _context.Logger.LogTrace("TODO: ReadFailed");
+
+                // Return ReadResult.IsCompleted == true from now on
+                // because we assume any read exceptions are not temporary
+                _isCompleted = true;
                 FireWriterCompleted(ex);
             }
 
