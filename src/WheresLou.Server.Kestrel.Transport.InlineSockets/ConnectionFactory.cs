@@ -17,7 +17,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             IOptions<InlineSocketsTransportOptions> options)
         {
             _context = new ConnectionContext(
-                connectionLogger, 
+                connectionLogger,
                 options.Value);
         }
 
