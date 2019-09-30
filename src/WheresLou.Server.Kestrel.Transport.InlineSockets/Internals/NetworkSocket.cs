@@ -28,9 +28,9 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Internals
             _receiveEventArgs.Completed += ReceiveAsyncCompleted;
         }
 
-        public virtual EndPoint LocalEndPoint => _socket.LocalEndPoint;
+        public virtual IPEndPoint LocalEndPoint => (IPEndPoint)_socket.LocalEndPoint;
 
-        public virtual EndPoint RemoteEndPoint => _socket.RemoteEndPoint;
+        public virtual IPEndPoint RemoteEndPoint => (IPEndPoint)_socket.RemoteEndPoint;
 
         public virtual void Dispose()
         {

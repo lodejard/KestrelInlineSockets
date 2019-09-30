@@ -1,15 +1,15 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
-using Microsoft.Extensions.Logging;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Logging;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
     public struct TransportContext
     {
         public TransportContext(
-            ILogger<Transport> logger,
+            ITransportLogger logger,
             InlineSocketsTransportOptions options,
             INetworkProvider networkProvider,
             IConnectionFactory connectionFactory)
@@ -20,7 +20,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             ConnectionFactory = connectionFactory;
         }
 
-        public ILogger<Transport> Logger { get; }
+        public ITransportLogger Logger { get; }
 
         public InlineSocketsTransportOptions Options { get; }
 

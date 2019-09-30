@@ -88,7 +88,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
         [Fact]
         public async Task ServerAcceptsPostBody()
         {
-            using (var services = new ServicesFixture())
+            using (var logging = new LoggingFixture())
+            using (var services = new ServicesFixture(logging))
             using (var app = new AppFixture())
             using (var client = new HttpClient())
             using (var timeout = new CancellationTokenSource(Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(2.5)))
