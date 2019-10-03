@@ -19,14 +19,14 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
     public partial class Connection : TransportConnection, IConnection, IDuplexPipe, IHttpConnectionFeature, IConnectionIdFeature, IConnectionTransportFeature, IMemoryPoolFeature, IApplicationTransportFeature, ITransportSchedulerFeature, IConnectionLifetimeFeature, IConnectionHeartbeatFeature, IConnectionLifetimeNotificationFeature
     {
-        private readonly ConnectionContext<Connection> _context;
+        private readonly ConnectionContext _context;
         private readonly INetworkSocket _socket;
         private readonly CancellationTokenSource _connectionCloseRequestedTokenSource;
         private readonly CancellationTokenSource _connectionClosedTokenSource;
         private readonly PipeReader _connectionPipeReader;
         private readonly PipeWriter _connectionPipeWriter;
-        private readonly EndPoint _socketRemoteEndPoint;
-        private readonly EndPoint _socketLocalEndPoint;
+        private readonly IPEndPoint _socketRemoteEndPoint;
+        private readonly IPEndPoint _socketLocalEndPoint;
         private string _connectionId;
         private IDuplexPipe _applicationDuplexPipe;
         private object _synchronizeCompletion = new object();
@@ -34,7 +34,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         private bool _pipeReaderComplete;
 
         public Connection(
-            ConnectionContext<Connection> context,
+            ConnectionContext context,
             IConnectionFactory connectionFactory,
             INetworkSocket socket)
         {
@@ -104,25 +104,25 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         IPAddress IHttpConnectionFeature.RemoteIpAddress
         {
-            get => ((IPEndPoint)_socketRemoteEndPoint).Address;
+            get => _socketRemoteEndPoint.Address;
             set => throw new NotImplementedException();
         }
 
         IPAddress IHttpConnectionFeature.LocalIpAddress
         {
-            get => ((IPEndPoint)_socketLocalEndPoint).Address;
+            get => _socketLocalEndPoint.Address;
             set => throw new NotImplementedException();
         }
 
         int IHttpConnectionFeature.RemotePort
         {
-            get => ((IPEndPoint)_socketRemoteEndPoint).Port;
+            get => _socketRemoteEndPoint.Port;
             set => throw new NotImplementedException();
         }
 
         int IHttpConnectionFeature.LocalPort
         {
-            get => ((IPEndPoint)_socketLocalEndPoint).Port;
+            get => _socketLocalEndPoint.Port;
             set => throw new NotImplementedException();
         }
 

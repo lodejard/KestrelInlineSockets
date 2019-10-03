@@ -6,7 +6,6 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
-using Microsoft.Extensions.Logging;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
@@ -33,7 +32,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public Task BindAsync()
         {
-            _context.Logger.LogDebug(new EventId(1, "BindListenSocket"), "Binding listen socket to {IPEndPoint}", _endPointInformation.IPEndPoint);
+            _context.Logger.BindListenSocket(_endPointInformation.IPEndPoint);
 
             _listener = _context.NetworkProvider.CreateListener(new NetworkListenerSettings
             {
@@ -53,7 +52,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public async Task UnbindAsync()
         {
-            _context.Logger.LogDebug(new EventId(2, "UnbindListenSocket"), "Unbinding listen socket from {IPEndPoint}", _endPointInformation.IPEndPoint);
+            _context.Logger.UnbindListenSocket(_endPointInformation.IPEndPoint);
 
             _acceptLoopTokenSource.Cancel(throwOnFirstException: false);
             _listener.Stop();
@@ -65,7 +64,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public Task StopAsync()
         {
-            _context.Logger.LogDebug(new EventId(3, "StopTransport"), "Inline sockets transport is stopped.");
+            _context.Logger.StopTransport();
             return Task.CompletedTask;
         }
 
@@ -77,9 +76,9 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
                 {
                     var socket = await listener.AcceptSocketAsync();
 
-                    _context.Logger.LogInformation(new EventId(5, "SocketAccepted"), "Socket accepted from {RemoteEndPoint} to {LocalEndPoint}", socket.RemoteEndPoint, socket.LocalEndPoint);
+                    _context.Logger.SocketAccepted(socket.RemoteEndPoint, socket.LocalEndPoint);
 
-                    var task = Task.Run(() => ProcessSocketAsync(socket, cancellationToken));
+                    var task = ProcessSocketAsyncSafe(socket, cancellationToken);
 
                     // TODO: need better way to ensure pending tasks complete before this method returns?
                     // for now, fire-and-forget async method will at least observe and log exceptions
@@ -104,7 +103,19 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             }
             catch (Exception ex)
             {
-                _context.Logger.LogError(new EventId(6, "OnConnectionError"), ex, "Unexpected failure thrown from IConnectionDispatcher.OnConnection");
+                _context.Logger.ConnectionDispatchFailed(ex);
+            }
+        }
+
+        public Task ProcessSocketAsyncSafe(INetworkSocket socket, CancellationToken cancellationToken)
+        {
+            try
+            {
+                return ProcessSocketAsync(socket, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                return Task.FromException(ex);
             }
         }
 
@@ -113,11 +124,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             var connection = _context.ConnectionFactory.CreateConnection(socket);
             try
             {
-                _context.Logger.LogTrace("TODO: Connection dispatch starting");
-
                 await _connectionDispatcher.OnConnection(connection.TransportConnection);
-
-                _context.Logger.LogTrace("TODO: Connection dispatch complete");
             }
             finally
             {

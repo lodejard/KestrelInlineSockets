@@ -12,9 +12,9 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Stubs
 {
     public class TestNetworkSocket : INetworkSocket
     {
-        public EndPoint LocalEndPoint { get; set; }
+        public IPEndPoint LocalEndPoint { get; set; }
 
-        public EndPoint RemoteEndPoint { get; set; }
+        public IPEndPoint RemoteEndPoint { get; set; }
 
         public bool IsDisposed { get; set; }
 

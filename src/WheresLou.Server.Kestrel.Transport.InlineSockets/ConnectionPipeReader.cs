@@ -13,7 +13,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
     public class ConnectionPipeReader : PipeReader
     {
-        private readonly ConnectionContext<ConnectionPipeReader> _context;
+        private readonly ConnectionContext _context;
         private readonly IConnection _connection;
         private readonly INetworkSocket _socket;
         private readonly CancellationTokenSource _writerCompleted;
@@ -25,7 +25,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         private Exception _writerCompletedException;
 
         public ConnectionPipeReader(
-            ConnectionContext<ConnectionPipeReader> context,
+            ConnectionContext context,
             IConnection connection,
             INetworkSocket socket)
         {
@@ -86,6 +86,10 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             catch (Exception ex)
             {
                 _context.Logger.LogTrace("TODO: ReadFailed");
+
+                // Return ReadResult.IsCompleted == true from now on
+                // because we assume any read exceptions are not temporary
+                _isCompleted = true;
                 FireWriterCompleted(ex);
             }
 
