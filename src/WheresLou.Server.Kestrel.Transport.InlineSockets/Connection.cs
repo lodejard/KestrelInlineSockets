@@ -63,6 +63,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         {
             _logger.LogDebug("TODO: Dispose {ConnectionId}", _connectionId);
 
+            (_connectionPipeReader as IDisposable)?.Dispose();
+            (_connectionPipeWriter as IDisposable)?.Dispose();
             _socket.Dispose();
         }
 

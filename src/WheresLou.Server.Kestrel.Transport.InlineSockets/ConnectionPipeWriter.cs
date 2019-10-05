@@ -12,7 +12,7 @@ using WheresLou.Server.Kestrel.Transport.InlineSockets.Network;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
-    public class ConnectionPipeWriter : PipeWriter
+    public class ConnectionPipeWriter : PipeWriter, IDisposable
     {
         private readonly IConnectionLogger _logger;
         private readonly IConnection _connection;
@@ -22,7 +22,9 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         private bool _isCanceled;
         private bool _isCompleted;
+#if NETSTANDARD2_0
         private Exception _readerCompletedException;
+#endif
 
         public ConnectionPipeWriter(
             IConnectionLogger logger,
@@ -40,6 +42,11 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         public bool IsCanceled => _isCanceled;
 
         public bool IsCompleted => _isCanceled || _isCompleted;
+
+        public void Dispose()
+        {
+            _buffer.Dispose();
+        }
 
         public override Memory<byte> GetMemory(int sizeHint)
         {

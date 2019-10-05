@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Memory
 {
-    public class RollingMemory
+    public class RollingMemory : IDisposable
     {
         private readonly MemoryPool<byte> _memoryPool;
         private RollingMemorySegment _firstSegment;
@@ -21,6 +21,20 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Memory
         }
 
         public bool IsEmpty => _firstSegment == _lastSegment && _firstIndex == _lastIndex;
+
+        public void Dispose()
+        {
+            // TODO: put object disposed guards in front of operations
+            var segment = _firstSegment;
+            _firstSegment = null;
+            _lastSegment = null;
+            while (segment != null)
+            {
+                var nextSegment = segment.Next;
+                segment.Dispose();
+                segment = nextSegment;
+            }
+        }
 
         public ReadOnlySequence<byte> GetOccupiedMemory()
         {
