@@ -2,210 +2,74 @@
 // Licensed under the MIT license.
 
 using System;
-using System.Buffers;
-using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
-using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
 using Microsoft.Extensions.Logging;
-using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Logging;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Network;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
-    public partial class Connection : TransportConnection, IConnection, IDuplexPipe, IHttpConnectionFeature, IConnectionIdFeature, IConnectionTransportFeature, IMemoryPoolFeature, IApplicationTransportFeature, ITransportSchedulerFeature, IConnectionLifetimeFeature, IConnectionHeartbeatFeature, IConnectionLifetimeNotificationFeature
+    public partial class Connection : IConnection
     {
-        private readonly ConnectionContext _context;
+        private readonly IFeatureCollection _features;
+        private readonly IConnectionLogger _logger;
+        private readonly InlineSocketsOptions _options;
         private readonly INetworkSocket _socket;
-        private readonly CancellationTokenSource _connectionCloseRequestedTokenSource;
-        private readonly CancellationTokenSource _connectionClosedTokenSource;
         private readonly PipeReader _connectionPipeReader;
         private readonly PipeWriter _connectionPipeWriter;
         private readonly IPEndPoint _socketRemoteEndPoint;
         private readonly IPEndPoint _socketLocalEndPoint;
+        private readonly CancellationTokenSource _connectionClosedTokenSource;
+
         private string _connectionId;
-        private IDuplexPipe _applicationDuplexPipe;
+        private IDuplexPipe _transport;
         private object _synchronizeCompletion = new object();
         private bool _pipeWriterComplete;
         private bool _pipeReaderComplete;
 
         public Connection(
-            ConnectionContext context,
-            IConnectionFactory connectionFactory,
+            IConnectionLogger logger,
+            InlineSocketsOptions options,
             INetworkSocket socket)
         {
-            _context = context;
+            _features = new FeatureCollection(this);
+            _logger = logger;
+            _options = options;
             _socket = socket;
-            _connectionCloseRequestedTokenSource = new CancellationTokenSource();
+            _transport = this;
+            _connectionPipeReader = options.CreatePipeReader(this, socket);
+            _connectionPipeWriter = options.CreatePipeWriter(this, socket);
+
             _connectionClosedTokenSource = new CancellationTokenSource();
-            _connectionPipeReader = connectionFactory.CreatePipeReader(this, socket);
-            _connectionPipeWriter = connectionFactory.CreatePipeWriter(this, socket);
 
             // preserving these values to avoid errors once the socket is closed
             _socketRemoteEndPoint = _socket.RemoteEndPoint;
             _socketLocalEndPoint = _socket.LocalEndPoint;
-
-            // this mechanism propogates a server-wide request for graceful shutdown. it is received by the http1/2 framing layer.
-            ConnectionClosedRequested.Register(OnCloseRequested);
-            ConnectionClosedRequested = _connectionCloseRequestedTokenSource.Token;
-
-            // this mechanism triggers when the connection tranceiving is entirely complete. used for cleanup. associated with abort.
-            ConnectionClosed = _connectionClosedTokenSource.Token;
-            ConnectionClosed.Register(() => _context.Logger.LogTrace("TODO: ConnectionClosed"));
         }
 
-        public override IFeatureCollection Features => this;
+        public IFeatureCollection Features => _features;
 
-        public override MemoryPool<byte> MemoryPool => ((IMemoryPoolFeature)this).MemoryPool;
-
-        public override PipeScheduler InputWriterScheduler => ((ITransportSchedulerFeature)this).InputWriterScheduler;
-
-        public override PipeScheduler OutputReaderScheduler => ((ITransportSchedulerFeature)this).OutputReaderScheduler;
-
-        public override IDuplexPipe Transport
-        {
-            get => ((IConnectionTransportFeature)this).Transport;
-            set => ((IConnectionTransportFeature)this).Transport = value;
-        }
-
-        PipeReader IDuplexPipe.Input => _connectionPipeReader;
-
-        PipeWriter IDuplexPipe.Output => _connectionPipeWriter;
-
-        public override IDictionary<object, object> Items
-        {
-            get => ((IConnectionItemsFeature)this).Items;
-            set => ((IConnectionItemsFeature)this).Items = value;
-        }
-
-        public override string ConnectionId
-        {
-            get => ((IConnectionIdFeature)this).ConnectionId;
-            set => ((IConnectionIdFeature)this).ConnectionId = value;
-        }
-
-        TransportConnection IConnection.TransportConnection => this;
-
-        string IConnectionIdFeature.ConnectionId
-        {
-            get => _connectionId;
-            set => _connectionId = value;
-        }
-
-        string IHttpConnectionFeature.ConnectionId
-        {
-            get => _connectionId;
-            set => _connectionId = value;
-        }
-
-        IPAddress IHttpConnectionFeature.RemoteIpAddress
-        {
-            get => _socketRemoteEndPoint.Address;
-            set => throw new NotImplementedException();
-        }
-
-        IPAddress IHttpConnectionFeature.LocalIpAddress
-        {
-            get => _socketLocalEndPoint.Address;
-            set => throw new NotImplementedException();
-        }
-
-        int IHttpConnectionFeature.RemotePort
-        {
-            get => _socketRemoteEndPoint.Port;
-            set => throw new NotImplementedException();
-        }
-
-        int IHttpConnectionFeature.LocalPort
-        {
-            get => _socketLocalEndPoint.Port;
-            set => throw new NotImplementedException();
-        }
-
-        IDuplexPipe IConnectionTransportFeature.Transport
-        {
-            get => this;
-            set { }
-        }
-
-        MemoryPool<byte> IMemoryPoolFeature.MemoryPool => _context.Options.MemoryPool;
-
-        IDuplexPipe IApplicationTransportFeature.Application
-        {
-            get => _applicationDuplexPipe;
-            set => _applicationDuplexPipe = value;
-        }
-
-        PipeScheduler ITransportSchedulerFeature.InputWriterScheduler => PipeScheduler.Inline;
-
-        PipeScheduler ITransportSchedulerFeature.OutputReaderScheduler => PipeScheduler.Inline;
-
-        CancellationToken IConnectionLifetimeFeature.ConnectionClosed
-        {
-            get => _connectionClosedTokenSource.Token;
-            set => throw new NotImplementedException();
-        }
-
-        CancellationToken IConnectionLifetimeNotificationFeature.ConnectionClosedRequested
-        {
-            get => _connectionCloseRequestedTokenSource.Token;
-            set => throw new NotImplementedException();
-        }
-
-        void IDisposable.Dispose()
-        {
-            _context.Logger.LogTrace("TODO: Connection Disposed {ConnectionId}", _connectionId);
-
-            _socket.Dispose();
-            _connectionCloseRequestedTokenSource.Dispose();
-            _connectionClosedTokenSource.Dispose();
-        }
-
-        public void OnCloseRequested()
-        {
-            _context.Logger.LogDebug("TODO: CloseRequested {ConnectionId}", _connectionId);
-
-            // signal close has been requested
-            _connectionCloseRequestedTokenSource.Cancel(throwOnFirstException: false);
-        }
-
-        public void OnAbortRequested(ConnectionAbortedException abortReason)
-        {
-            _context.Logger.LogDebug("TODO: AbortRequested {ConnectionId}", _connectionId);
-
-            // stop any additional data from arriving
-            _connectionPipeReader.CancelPendingRead();
-        }
-
-        public override void Abort()
-        {
-            OnAbortRequested(null);
-        }
-
-        public override void Abort(ConnectionAbortedException abortReason)
+        void IConnection.Abort(ConnectionAbortedException abortReason)
         {
             OnAbortRequested(abortReason);
         }
 
-        void IConnectionLifetimeFeature.Abort()
+        void IDisposable.Dispose()
         {
-            OnAbortRequested(null);
+            _logger.LogDebug("TODO: Dispose {ConnectionId}", _connectionId);
+
+            _socket.Dispose();
         }
 
-        void IConnectionHeartbeatFeature.OnHeartbeat(Action<object> action, object state)
+        Task IConnection.DisposeAsync()
         {
-            // this method must be delegated to the base implementation because private fields and
-            // non-virtual public methods prevent the implementation from being controlled
-            OnHeartbeat(action, state);
-        }
-
-        void IConnectionLifetimeNotificationFeature.RequestClose()
-        {
-            OnCloseRequested();
+            ((IDisposable)this).Dispose();
+            return Task.CompletedTask;
         }
 
         void IConnection.OnPipeReaderComplete(Exception exception)
@@ -250,6 +114,14 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
                 // this is necessary for Kestrel to realize the connection has ended
                 _connectionPipeReader.CancelPendingRead();
             }
+        }
+
+        private void OnAbortRequested(ConnectionAbortedException abortReason)
+        {
+            _logger.LogDebug("TODO: AbortRequested {ConnectionId}", _connectionId);
+
+            // stop any additional data from arriving
+            _connectionPipeReader.CancelPendingRead();
         }
     }
 }

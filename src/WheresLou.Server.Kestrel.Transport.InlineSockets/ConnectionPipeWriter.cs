@@ -6,13 +6,15 @@ using System.IO.Pipelines;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Logging;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Memory;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Network;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
     public class ConnectionPipeWriter : PipeWriter
     {
-        private readonly ConnectionContext _context;
+        private readonly IConnectionLogger _logger;
         private readonly IConnection _connection;
         private readonly INetworkSocket _socket;
         private readonly CancellationTokenSource _readerCompleted;
@@ -23,15 +25,16 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         private Exception _readerCompletedException;
 
         public ConnectionPipeWriter(
-            ConnectionContext context,
+            IConnectionLogger logger,
+            InlineSocketsOptions options,
             IConnection connection,
             INetworkSocket socket)
         {
-            _context = context;
+            _logger = logger;
             _connection = connection;
             _socket = socket;
             _readerCompleted = new CancellationTokenSource();
-            _buffer = new RollingMemory(_context.Options.MemoryPool);
+            _buffer = new RollingMemory(options.MemoryPool);
         }
 
         public bool IsCanceled => _isCanceled;
@@ -60,7 +63,11 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
                 while (!_buffer.IsEmpty)
                 {
                     var memory = _buffer.GetOccupiedMemory();
+
+                    _logger.LogTrace("TODO: SendStarting");
                     var bytes = _socket.Send(memory);
+                    _logger.LogTrace("TODO: SendComplete");
+
                     _buffer.ConsumeOccupiedMemory(bytes);
                 }
             }
@@ -84,12 +91,13 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public override void Complete(Exception exception = null)
         {
-            _context.Logger.LogTrace(exception, "TODO: PipeWriterComplete");
+            _logger.LogTrace(exception, "TODO: PipeWriterComplete");
 
             _isCompleted = true;
             _connection.OnPipeWriterComplete(exception);
         }
 
+#if NETSTANDARD2_0
         public override void OnReaderCompleted(Action<Exception, object> callback, object state)
         {
             _readerCompleted.Token.Register(() => callback(_readerCompletedException, state));
@@ -100,5 +108,10 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             _readerCompletedException = exception;
             _readerCompleted.Cancel();
         }
+#else
+        private void FireReaderCompleted(Exception exception)
+        {
+        }
+#endif
     }
 }

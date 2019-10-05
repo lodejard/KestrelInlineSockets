@@ -3,13 +3,18 @@
 
 using System;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
+using Microsoft.AspNetCore.Connections;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
     public interface IConnection : IDisposable
     {
-        TransportConnection TransportConnection { get; }
+        IFeatureCollection Features { get; }
+
+        void Abort(ConnectionAbortedException abortReason);
+
+        Task DisposeAsync();
 
         void OnPipeReaderComplete(Exception exception);
 

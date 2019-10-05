@@ -7,17 +7,19 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using WheresLou.Server.Kestrel.Transport.InlineSockets.Internals;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Logging;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Memory;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.Network;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
     public class ConnectionPipeReader : PipeReader
     {
-        private readonly ConnectionContext _context;
+        private readonly IConnectionLogger _logger;
         private readonly IConnection _connection;
         private readonly INetworkSocket _socket;
-        private readonly CancellationTokenSource _writerCompleted;
         private readonly RollingMemory _buffer;
+        private readonly CancellationTokenSource _writerCompleted;
 
         private bool _bufferHasUnexaminedData;
         private bool _isCanceled;
@@ -25,15 +27,16 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         private Exception _writerCompletedException;
 
         public ConnectionPipeReader(
-            ConnectionContext context,
+            IConnectionLogger logger,
+            InlineSocketsOptions options,
             IConnection connection,
             INetworkSocket socket)
         {
-            _context = context;
+            _logger = logger;
             _connection = connection;
             _socket = socket;
+            _buffer = new RollingMemory(options.MemoryPool);
             _writerCompleted = new CancellationTokenSource();
-            _buffer = new RollingMemory(_context.Options.MemoryPool);
         }
 
         public bool IsCanceled => _isCanceled;
@@ -60,11 +63,12 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             {
                 if (!IsCompleted)
                 {
+                    // TODO: better size hint?
                     var memory = _buffer.GetTrailingMemory();
 
-                    _context.Logger.LogTrace("TODO: ReadStarting");
+                    _logger.LogTrace("TODO: ReadStarting");
                     var bytes = await _socket.ReceiveAsync(memory, cancellationToken);
-                    _context.Logger.LogTrace("TODO: ReadComplete {bytes}", bytes);
+                    _logger.LogTrace("TODO: ReadComplete {bytes}", bytes);
 
                     if (bytes != 0)
                     {
@@ -80,12 +84,12 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             }
             catch (TaskCanceledException)
             {
-                _context.Logger.LogTrace("TODO: ReadCanceled");
+                _logger.LogTrace("TODO: ReadCanceled");
                 _isCanceled = true;
             }
             catch (Exception ex)
             {
-                _context.Logger.LogTrace("TODO: ReadFailed");
+                _logger.LogTrace("TODO: ReadFailed");
 
                 // Return ReadResult.IsCompleted == true from now on
                 // because we assume any read exceptions are not temporary
@@ -113,19 +117,20 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public override void CancelPendingRead()
         {
-            _context.Logger.LogTrace("TODO: CancelPendingRead");
+            _logger.LogTrace("TODO: CancelPendingRead");
 
             _socket.CancelPendingRead();
         }
 
         public override void Complete(Exception exception)
         {
-            _context.Logger.LogTrace(exception, "TODO: PipeReaderComplete");
+            _logger.LogTrace(exception, "TODO: PipeReaderComplete");
 
             _isCompleted = true;
             _connection.OnPipeReaderComplete(exception);
         }
 
+#if NETSTANDARD2_0
         public override void OnWriterCompleted(Action<Exception, object> callback, object state)
         {
             _writerCompleted.Token.Register(() => callback(_writerCompletedException, state));
@@ -136,5 +141,10 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             _writerCompletedException = exception;
             _writerCompleted.Cancel();
         }
+#else
+        public void FireWriterCompleted(Exception exception)
+        {
+        }
+#endif
     }
 }
