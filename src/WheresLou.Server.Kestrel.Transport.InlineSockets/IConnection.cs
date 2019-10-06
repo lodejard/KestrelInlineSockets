@@ -9,6 +9,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
     public interface IConnection : IDisposable, IAsyncDisposable
     {
+        string ConnectionId { get; }
+
         IFeatureCollection Features { get; }
 
         void Abort(ConnectionAbortedException abortReason);

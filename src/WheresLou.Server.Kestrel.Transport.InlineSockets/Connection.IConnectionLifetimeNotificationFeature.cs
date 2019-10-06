@@ -20,7 +20,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         void IConnectionLifetimeNotificationFeature.RequestClose()
         {
-            _logger.LogDebug("TODO: CloseRequested {ConnectionId}", _connectionId);
+            _logger.LogDebug("TODO: CloseRequested {ConnectionId}", ConnectionId);
 
             _connectionCloseRequestedSource.Cancel(throwOnFirstException: false);
         }

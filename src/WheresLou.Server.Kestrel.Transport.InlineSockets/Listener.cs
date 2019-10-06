@@ -3,6 +3,7 @@
 
 using System;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.Logging;
@@ -83,9 +84,30 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         {
             using (cancellationToken.Register(_listenerCancellationCallback))
             {
-                var socket = await _listener.AcceptSocketAsync();
-                _logger.SocketAccepted(socket.RemoteEndPoint, socket.LocalEndPoint);
-                return _options.CreateConnection(socket);
+                while (true)
+                {
+                    try
+                    {
+                        var socket = await _listener.AcceptSocketAsync();
+                        _logger.SocketAccepted(socket.RemoteEndPoint, socket.LocalEndPoint);
+                        return _options.CreateConnection(socket);
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // A call was made to UnbindAsync/DisposeAsync just return null which signals we're done
+                        return null;
+                    }
+                    catch (SocketException e) when (e.SocketErrorCode == SocketError.OperationAborted)
+                    {
+                        // A call was made to UnbindAsync/DisposeAsync just return null which signals we're done
+                        return null;
+                    }
+                    catch (SocketException)
+                    {
+                        // The connection got reset while it was in the backlog, so we try again.
+                        _logger.ConnectionReset(connectionId: "(null)");
+                    }
+                }
             }
         }
     }

@@ -11,8 +11,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
     {
         string IHttpConnectionFeature.ConnectionId
         {
-            get => _connectionId;
-            set => _connectionId = value;
+            get => ConnectionId;
+            set => ConnectionId = value;
         }
 
         IPAddress IHttpConnectionFeature.RemoteIpAddress

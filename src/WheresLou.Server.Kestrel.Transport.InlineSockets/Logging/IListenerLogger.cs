@@ -17,6 +17,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Logging
 
         void SocketAccepted(EndPoint remoteEndPoint, EndPoint localEndPoint);
 
-        void ConnectionDispatchFailed(Exception error);
+        void ConnectionDispatchFailed(string connectionId, Exception error);
+
+        void ConnectionReset(string connectionId);
     }
 }

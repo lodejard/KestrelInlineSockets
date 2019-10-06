@@ -13,7 +13,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Logging
         private static readonly LoggerMessage<IPEndPoint> _logUnbindListenSocket = (LogLevel.Debug, 2, "UnbindListenSocket", "Unbinding listen socket from {IPEndPoint}");
         private static readonly LoggerMessage _logStopListener = (LogLevel.Debug, 3, "StopListener", "Inline sockets transport is stopped");
         private static readonly LoggerMessage<EndPoint, EndPoint> _logSocketAccepted = (LogLevel.Information, 4, "SocketAccepted", "Socket accepted from {RemoteEndPoint} to {LocalEndPoint}");
-        private static readonly LoggerMessage _logConnectionDispatchFailed = (LogLevel.Debug, 5, "ConnectionDispatchFailed", "Unexpected failure thrown from IConnectionDispatcher.OnConnection");
+        private static readonly LoggerMessage<string> _logConnectionDispatchFailed = (LogLevel.Debug, 5, "ConnectionDispatchFailed", "Unexpected failure thrown by IConnectionDispatcher.OnConnection of connection '{ConnectionId}'");
+        private static readonly LoggerMessage<string> _logConnectionReset = (LogLevel.Debug, 6, "ConnectionReset", "Connection '{ConnectionId}' reset");
 
         public ListenerLogger(ILoggerFactory loggerFactory)
             : base(loggerFactory, typeof(Listener).FullName)
@@ -28,6 +29,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Logging
 
         public virtual void SocketAccepted(EndPoint remoteEndPoint, EndPoint localEndPoint) => _logSocketAccepted.Log(this, remoteEndPoint, localEndPoint, null);
 
-        public virtual void ConnectionDispatchFailed(Exception error) => _logConnectionDispatchFailed.Log(this, error);
+        public virtual void ConnectionDispatchFailed(string connectionId, Exception error) => _logConnectionDispatchFailed.Log(this, connectionId, error);
+
+        public void ConnectionReset(string connectionId) => _logConnectionReset.Log(this, connectionId, null);
     }
 }

@@ -26,6 +26,11 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         public virtual async ValueTask<Microsoft.AspNetCore.Connections.ConnectionContext> AcceptAsync(CancellationToken cancellationToken = default)
         {
             var connection = await _listener.AcceptAsync(cancellationToken);
+            if (connection == null)
+            {
+                return null;
+            }
+
             return new ConnectionContext(connection);
         }
 

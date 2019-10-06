@@ -55,7 +55,11 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             }
             catch (TaskCanceledException)
             {
-                // normal exit from cancellation
+                // normal exit via cancellation
+            }
+            catch (OperationCanceledException)
+            {
+                // normal exit via cancellation
             }
 
             await _listener.UnbindAsync();
@@ -68,20 +72,15 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public virtual async Task AcceptLoopAsync(CancellationToken cancellationToken = default)
         {
-            for (; ; )
+            while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                try
+                var connection = await _listener.AcceptAsync(cancellationToken);
+                if (connection != null)
                 {
-                    var connection = await _listener.AcceptAsync(cancellationToken);
                     var task = DispatchConnectionAsync(connection);
-                    HandleExceptions(task);
-                }
-                catch (ObjectDisposedException)
-                {
-                    // object disposed from listener means happens because the socket has been closed during cancellation
-                    throw new TaskCanceledException();
+                    HandleExceptions(connection.ConnectionId, task);
                 }
             }
         }
@@ -99,15 +98,15 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             }
         }
 
-        private async void HandleExceptions(Task task)
+        private async void HandleExceptions(string connectionId, Task task)
         {
             try
             {
                 await task;
             }
-            catch (Exception ex)
+            catch (Exception error)
             {
-                _logger.ConnectionDispatchFailed(ex);
+                _logger.ConnectionDispatchFailed(connectionId, error);
             }
         }
     }

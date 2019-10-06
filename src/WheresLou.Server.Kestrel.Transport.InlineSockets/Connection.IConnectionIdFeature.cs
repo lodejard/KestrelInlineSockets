@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
+using System.Threading;
 using Microsoft.AspNetCore.Connections.Features;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
@@ -9,8 +10,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
     {
         string IConnectionIdFeature.ConnectionId
         {
-            get => _connectionId;
-            set => _connectionId = value;
+            get => ConnectionId;
+            set => ConnectionId = value;
         }
     }
 }

@@ -54,6 +54,12 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public IFeatureCollection Features => _features;
 
+        public virtual string ConnectionId
+        {
+            get => _connectionId ?? Interlocked.CompareExchange(ref _connectionId, CorrelationIdGenerator.GetNextId(), null);
+            set => _connectionId = value;
+        }
+
         void IConnection.Abort(ConnectionAbortedException abortReason)
         {
             OnAbortRequested(abortReason);
@@ -61,7 +67,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         void IDisposable.Dispose()
         {
-            _logger.LogDebug("TODO: Dispose {ConnectionId}", _connectionId);
+            _logger.LogDebug("TODO: Dispose {ConnectionId}", ConnectionId);
 
             (_connectionPipeReader as IDisposable)?.Dispose();
             (_connectionPipeWriter as IDisposable)?.Dispose();
@@ -119,7 +125,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         private void OnAbortRequested(ConnectionAbortedException abortReason)
         {
-            _logger.LogDebug("TODO: AbortRequested {ConnectionId}", _connectionId);
+            _logger.LogDebug("TODO: AbortRequested {ConnectionId}", ConnectionId);
 
             // stop any additional data from arriving
             _connectionPipeReader.CancelPendingRead();
