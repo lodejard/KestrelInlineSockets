@@ -1,17 +1,12 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
-#if NETSTANDARD2_0
-using System;
+
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
-using Microsoft.Extensions.DependencyInjection;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.TestHelpers;
-using WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Fixtures;
-using WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Stubs;
 using Xunit;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
@@ -21,35 +16,32 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
         [Fact]
         public async Task BindCreatesSocketWhichAcceptsConnection()
         {
-            using (var test = new TestContext()) 
-            {
-                test.EndPoint.FindUnusedPort();
+            using var test = new TestContext();
 
-                var transportFactory = test.Services.GetService<ITransportFactory>();
+            // create listener and bind to unused port
+            using var listener = test.Options.InlineSocketsOptions.CreateListener();
+            test.EndPoint.FindUnusedPort();
+            await listener.BindAsync(test.EndPoint.IPEndPoint, null, test.Timeout.Token);
 
-                var connectionDispatcher = new TestConnectionDispatcher();
+            // accept connection which will not be available yet
+            var acceptTask = listener.AcceptAsync(test.Timeout.Token);
+            Assert.False(acceptTask.IsCompleted);
 
-                var transport = transportFactory.Create(
-                    test.EndPoint.EndPointInformation,
-                    connectionDispatcher);
+            // create client socket and connect
+            var client = new Socket(SocketType.Stream, ProtocolType.IP);
+            client.Connect(test.EndPoint.IPEndPoint);
 
-                await transport.BindAsync();
+            // finish accepting connection from listener
+            using var connection = await acceptTask;
 
-                using (var socket = new Socket(SocketType.Stream, ProtocolType.IP))
-                {
-                    Assert.Empty(connectionDispatcher.Connections);
+            // verify connection's remote port is same as client's local port
+            var localIPEndPoint = (IPEndPoint)client.LocalEndPoint;
+            var remotePort = ((IHttpConnectionFeature)connection).RemotePort;
+            Assert.Equal(localIPEndPoint.Port, remotePort);
 
-                    socket.Connect(test.EndPoint.EndPointInformation.IPEndPoint);
-                    var localIPEndPoint = (IPEndPoint)socket.LocalEndPoint;
-
-                    await Task.Delay(TimeSpan.FromMilliseconds(200));
-
-                    var connection = Assert.Single(connectionDispatcher.Connections);
-
-                    Assert.Equal(localIPEndPoint.Port, ((IHttpConnectionFeature)connection).RemotePort);
-                }
-            }
+            await connection.DisposeAsync();
+            await listener.DisposeAsync();
         }
     }
 }
-#endif
+

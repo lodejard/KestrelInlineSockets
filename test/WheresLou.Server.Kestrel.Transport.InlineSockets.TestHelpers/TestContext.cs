@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.Net.Http;
-using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.TestHelpers.Fixtures;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Fixtures;
@@ -22,6 +20,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.TestHelpers
                 .AddSingleton<ServicesFixture>()
                 .AddSingleton<TimeoutFixture>()
                 .AddSingleton<HttpClient>()
+                .AddSingleton<OptionsFixture>()
                 .BuildServiceProvider();
         }
 
@@ -32,6 +31,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.TestHelpers
         public ServicesFixture Services => _fixtures.GetService<ServicesFixture>();
         public TimeoutFixture Timeout => _fixtures.GetService<TimeoutFixture>();
         public HttpClient Client => _fixtures.GetService<HttpClient>();
+        public OptionsFixture Options => _fixtures.GetService<OptionsFixture>();
 
         public void Dispose()
         {

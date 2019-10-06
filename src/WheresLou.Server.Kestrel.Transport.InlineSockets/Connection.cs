@@ -68,10 +68,9 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
             _socket.Dispose();
         }
 
-        Task IConnection.DisposeAsync()
+        async ValueTask IAsyncDisposable.DisposeAsync()
         {
             ((IDisposable)this).Dispose();
-            return Task.CompletedTask;
         }
 
         void IConnection.OnPipeReaderComplete(Exception exception)

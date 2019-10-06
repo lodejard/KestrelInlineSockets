@@ -1,10 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
-#if NETSTANDARD2_0
-using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
-using Microsoft.Extensions.DependencyInjection;
-using WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Fixtures;
+using System.Threading.Tasks;
+using WheresLou.Server.Kestrel.Transport.InlineSockets.TestHelpers;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Stubs;
 using Xunit;
 
@@ -13,36 +11,31 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
     public abstract class FactoryTests
     {
         [Fact]
-        public void TransportFactoryCreate()
+        public async Task TransportFactoryCreate()
         {
-            using (var services = new ServicesFixture())
-            {
-                var transportFactory = services.GetService<ITransportFactory>();
+            using var test = new TestContext();
 
-                var transport = transportFactory.Create(new TestEndPointInformation(), new TestConnectionDispatcher());
+            using var listener = test.Options.InlineSocketsOptions.CreateListener();
 
-                Assert.NotNull(transport);
-            }
+            Assert.NotNull(listener);
+
+            await listener.DisposeAsync();
         }
 
         [Fact]
-        public void ConnectionFactoryCreate()
+        public async Task ConnectionFactoryCreate()
         {
-            using (var services = new ServicesFixture())
-            {
-                var connectionFactory = services.GetService<IInlineConnectionFactory>();
+            using var test = new TestContext();
 
-                var socket = new TestNetworkSocket();
+            var socket = new TestNetworkSocket();
 
-                var connection = connectionFactory.CreateConnection(socket);
+            var connection = test.Options.InlineSocketsOptions.CreateConnection(socket);
 
-                Assert.NotNull(connection);
+            Assert.NotNull(connection);
 
-                connection.Dispose();
+            connection.Dispose();
 
-                Assert.True(socket.IsDisposed);
-            }
+            Assert.True(socket.IsDisposed);
         }
     }
 }
-#endif

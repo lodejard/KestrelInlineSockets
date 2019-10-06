@@ -4,31 +4,20 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
-using WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Stubs;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Fixtures
 {
-    public class EndPointFixture : IDisposable
+    public class EndPointFixture
     {
-#if NETSTANDARD2_0
-        public TestEndPointInformation EndPointInformation { get; set; } = new TestEndPointInformation();
+        public IPEndPoint IPEndPoint { get; set; } 
 
         public void FindUnusedPort()
         {
-            using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.IP))
-            {
-                socket.Bind(new IPEndPoint(IPAddress.Loopback, 0));
+            using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.IP);
+            
+            socket.Bind(new IPEndPoint(IPAddress.Loopback, 0));
 
-                EndPointInformation.Type = Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal.ListenType.IPEndPoint;
-                EndPointInformation.IPEndPoint = (IPEndPoint)socket.LocalEndPoint;
-
-                socket.Close();
-            }
-        }
-#endif
-
-        public void Dispose()
-        {
+            IPEndPoint = (IPEndPoint)socket.LocalEndPoint;
         }
     }
 }

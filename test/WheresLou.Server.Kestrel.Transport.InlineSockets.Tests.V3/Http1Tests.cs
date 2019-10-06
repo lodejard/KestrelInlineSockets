@@ -2,17 +2,13 @@
 // Licensed under the MIT license.
 
 using System;
-using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.Extensions.DependencyInjection;
 using WheresLou.Server.Kestrel.Transport.InlineSockets.TestHelpers;
-using WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Fixtures;
 using Xunit;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
@@ -133,6 +129,10 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
             var body1 = await response1.Content.ReadAsByteArrayAsync();
             var body2 = await response2.Content.ReadAsByteArrayAsync();
             var body3 = await response3.Content.ReadAsByteArrayAsync();
+
+            Assert.All(body1.Zip(bytes1, (a, b) => (a, b)), pair => Assert.Equal(pair.a, pair.b));
+            Assert.All(body2.Zip(bytes2, (a, b) => (a, b)), pair => Assert.Equal(pair.a, pair.b));
+            Assert.All(body3.Zip(bytes3, (a, b) => (a, b)), pair => Assert.Equal(pair.a, pair.b));
         }
     }
 }

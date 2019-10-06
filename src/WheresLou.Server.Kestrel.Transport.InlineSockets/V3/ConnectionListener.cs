@@ -14,9 +14,9 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
     public class ConnectionListener : IConnectionListener
     {
-        private readonly Listener _listener;
+        private readonly IListener _listener;
 
-        public ConnectionListener(Listener listener)
+        public ConnectionListener(IListener listener)
         {
             _listener = listener;
         }
