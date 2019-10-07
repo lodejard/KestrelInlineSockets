@@ -32,7 +32,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public virtual EndPoint EndPoint => _ipEndpoint;
 
-        public virtual async ValueTask BindAsync(EndPoint endpoint, bool? noDelay, CancellationToken cancellationToken = default)
+        public virtual async ValueTask BindAsync(EndPoint endpoint, CancellationToken cancellationToken = default)
         {
             if (endpoint is IPEndPoint ipEndpoint)
             {
@@ -51,7 +51,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
                 AllowNatTraversal = _options.AllowNatTraversal,
                 ExclusiveAddressUse = _options.ExclusiveAddressUse,
                 ListenerBacklog = _options.ListenBacklog,
-                NoDelay = noDelay,
+                NoDelay = _options.NoDelay,
             });
 
             // the only way to cancel a call to accept a socket is to stop the listener.

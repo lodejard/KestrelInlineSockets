@@ -21,7 +21,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
             // create listener and bind to unused port
             using var listener = test.Options.InlineSocketsOptions.CreateListener();
             test.EndPoint.FindUnusedPort();
-            await listener.BindAsync(test.EndPoint.IPEndPoint, null, test.Timeout.Token);
+            await listener.BindAsync(test.EndPoint.IPEndPoint, test.Timeout.Token);
 
             // accept connection which will not be available yet
             var acceptTask = listener.AcceptAsync(test.Timeout.Token);

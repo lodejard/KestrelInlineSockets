@@ -39,8 +39,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         public virtual async Task BindAsync()
         {
             await _listener.BindAsync(
-                _endPointInformation.IPEndPoint,
-                _endPointInformation.NoDelay);
+                _endPointInformation.IPEndPoint);
 
             _acceptLoopTask = Task.Run(() => AcceptLoopAsync(_acceptLoopCancellation.Token));
         }

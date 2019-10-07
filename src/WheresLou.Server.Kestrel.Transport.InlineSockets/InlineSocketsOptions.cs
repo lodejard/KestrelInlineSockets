@@ -18,6 +18,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 
         public bool? ExclusiveAddressUse { get; set; }
 
+        public bool? NoDelay { get; set; }
+
         public Func<IListener> CreateListener { get; set; }
 
         public Func<INetworkSocket, IConnection> CreateConnection { get; set; }

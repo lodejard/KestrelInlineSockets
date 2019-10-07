@@ -22,7 +22,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
         public virtual async ValueTask<IConnectionListener> BindAsync(EndPoint endpoint, CancellationToken cancellationToken = default)
         {
             var listener = _options.CreateListener();
-            await listener.BindAsync(endpoint, default, cancellationToken);
+            await listener.BindAsync(endpoint, cancellationToken);
             return new ConnectionListener(listener);
         }
     }

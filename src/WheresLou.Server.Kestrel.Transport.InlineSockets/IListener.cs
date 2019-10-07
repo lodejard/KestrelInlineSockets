@@ -12,7 +12,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets
     {
         EndPoint EndPoint { get; }
 
-        ValueTask BindAsync(EndPoint endpoint, bool? noDelay, CancellationToken cancellationToken = default);
+        ValueTask BindAsync(EndPoint endpoint, CancellationToken cancellationToken = default);
 
         ValueTask UnbindAsync(CancellationToken cancellationToken = default);
 
