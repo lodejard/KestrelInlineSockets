@@ -2,23 +2,16 @@
 // Licensed under the MIT license.
 
 #if NETSTANDARD2_0
-using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO.Pipelines;
-using System.Net;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Connections.Features;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
-using Microsoft.Extensions.Logging;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
-    public class TransportConnection : Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal.TransportConnection, IHttpConnectionFeature, IConnectionIdFeature, IConnectionTransportFeature, IMemoryPoolFeature, IApplicationTransportFeature, ITransportSchedulerFeature, IConnectionLifetimeFeature, IConnectionHeartbeatFeature, IConnectionLifetimeNotificationFeature
+    public class TransportConnection : Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal.TransportConnection
     {
         private readonly IConnection _connection;
         private FeatureReference<IConnectionIdFeature> _connectionIdFeature;
