@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -133,6 +134,37 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
             Assert.All(body1.Zip(bytes1, (a, b) => (a, b)), pair => Assert.Equal(pair.a, pair.b));
             Assert.All(body2.Zip(bytes2, (a, b) => (a, b)), pair => Assert.Equal(pair.a, pair.b));
             Assert.All(body3.Zip(bytes3, (a, b) => (a, b)), pair => Assert.Equal(pair.a, pair.b));
+        }
+
+        [Fact]
+        public virtual async Task ConnectionCloseCanBeProvided()
+        {
+            using var test = new TestContext();
+
+            var connectionIds = new List<string>();
+
+            test.App.OnRequest = async message =>
+            {
+                var request = message.Get<IHttpRequestFeature>();
+                var response = message.Get<IHttpResponseFeature>();
+                var connection = message.Get<IHttpConnectionFeature>();
+
+                response.Headers["Content-Type"] = "text/plain";
+                response.Headers["Connection"] = "close";
+
+                connectionIds.Add(connection.ConnectionId);
+
+                var bytes = Encoding.UTF8.GetBytes("Hello world!");
+                message.ResponseStream.Write(bytes, 0, bytes.Length);
+            };
+
+            await test.Server.StartAsync();
+
+            var response1 = await test.Client.GetAsync("http://localhost:5000/", test.Timeout.Token);
+            var response2 = await test.Client.GetAsync("http://localhost:5000/", test.Timeout.Token);
+            var response3 = await test.Client.GetAsync("http://localhost:5000/", test.Timeout.Token);
+
+            Assert.Equal(3, connectionIds.Distinct().Count());
         }
     }
 }
