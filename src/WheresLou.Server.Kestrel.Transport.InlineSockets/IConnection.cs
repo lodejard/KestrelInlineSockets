@@ -2,14 +2,18 @@
 // Licensed under the MIT license.
 
 using System;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal;
+using Microsoft.AspNetCore.Connections;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets
 {
-    public interface IConnection : IDisposable
+    public interface IConnection : IDisposable, IAsyncDisposable
     {
-        TransportConnection TransportConnection { get; }
+        string ConnectionId { get; }
+
+        IFeatureCollection Features { get; }
+
+        void Abort(ConnectionAbortedException abortReason);
 
         void OnPipeReaderComplete(Exception exception);
 
