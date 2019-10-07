@@ -8,7 +8,7 @@ using Xunit;
 
 namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
 {
-    public abstract class FactoryTests
+    public class FactoryTests
     {
         [Fact]
         public async Task TransportFactoryCreate()
