@@ -45,7 +45,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
 
             await test.Server.StartAsync();
 
-            var responseMessage = await test.Client.GetAsync("http://localhost:5000/", test.Timeout.Token);
+            var responseMessage = await test.Client.GetAsync("/");
 
             var responseBody = await responseMessage.Content.ReadAsStringAsync();
 
@@ -59,9 +59,9 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
 
             await test.Server.StartAsync();
 
-            var response1 = await test.Client.GetAsync("http://localhost:5000/request1", test.Timeout.Token);
-            var response2 = await test.Client.GetAsync("http://localhost:5000/request2", test.Timeout.Token);
-            var response3 = await test.Client.GetAsync("http://localhost:5000/request3", test.Timeout.Token);
+            var response1 = await test.Client.GetAsync("/request1");
+            var response2 = await test.Client.GetAsync("/request2");
+            var response3 = await test.Client.GetAsync("/request3");
         }
 
         [Fact]
@@ -88,10 +88,9 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
 
             await test.Server.StartAsync();
 
-            var response1 = await test.Client.PostAsync("http://localhost:5000/", new StringContent("Request Data One"), test.Timeout.Token);
-            var response2 = await test.Client.PostAsync("http://localhost:5000/", new StringContent("Request Data Two"), test.Timeout.Token);
-            var response3 = await test.Client.PostAsync("http://localhost:5000/", new StringContent("Request Data Three"), test.Timeout.Token);
-
+            var response1 = await test.Client.PostStringAsync("/", new StringContent("Request Data One"));
+            var response2 = await test.Client.PostStringAsync("/", new StringContent("Request Data Two"));
+            var response3 = await test.Client.PostStringAsync("/", new StringContent("Request Data Three"));
         }
 
         [Fact]
@@ -122,19 +121,15 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
             random.NextBytes(bytes2);
             random.NextBytes(bytes3);
 
-            var response1 = await test.Client.PostAsync("http://localhost:5000/", new ByteArrayContent(bytes1), test.Timeout.Token);
-            var response2 = await test.Client.PostAsync("http://localhost:5000/", new ByteArrayContent(bytes2), test.Timeout.Token);
-            var response3 = await test.Client.PostAsync("http://localhost:5000/", new ByteArrayContent(bytes3), test.Timeout.Token);
+            var response1 = await test.Client.PostBytesAsync("/", new ByteArrayContent(bytes1));
+            var response2 = await test.Client.PostBytesAsync("/", new ByteArrayContent(bytes2));
+            var response3 = await test.Client.PostBytesAsync("/", new ByteArrayContent(bytes3));
 
             await test.Server.StopAsync();
 
-            var body1 = await response1.Content.ReadAsByteArrayAsync();
-            var body2 = await response2.Content.ReadAsByteArrayAsync();
-            var body3 = await response3.Content.ReadAsByteArrayAsync();
-
-            Assert.All(body1.Zip(bytes1, (a, b) => (a, b)), pair => Assert.Equal(pair.a, pair.b));
-            Assert.All(body2.Zip(bytes2, (a, b) => (a, b)), pair => Assert.Equal(pair.a, pair.b));
-            Assert.All(body3.Zip(bytes3, (a, b) => (a, b)), pair => Assert.Equal(pair.a, pair.b));
+            Assert.All(response1.content.Zip(bytes1, (a, b) => (a, b)), pair => Assert.Equal(pair.a, pair.b));
+            Assert.All(response2.content.Zip(bytes2, (a, b) => (a, b)), pair => Assert.Equal(pair.a, pair.b));
+            Assert.All(response3.content.Zip(bytes3, (a, b) => (a, b)), pair => Assert.Equal(pair.a, pair.b));
         }
 
         [Fact]
@@ -160,9 +155,9 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
 
             await test.Server.StartAsync();
 
-            var response1 = await test.Client.GetAsync("http://localhost:5000/", test.Timeout.Token);
-            var response2 = await test.Client.GetAsync("http://localhost:5000/", test.Timeout.Token);
-            var response3 = await test.Client.GetAsync("http://localhost:5000/", test.Timeout.Token);
+            var response1 = await test.Client.GetStringAsync("/");
+            var response2 = await test.Client.GetStringAsync("/");
+            var response3 = await test.Client.GetStringAsync("/");
 
             Assert.Single(connectionIds.Distinct());
 
@@ -193,9 +188,9 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
 
             await test.Server.StartAsync();
 
-            var response1 = await test.Client.GetAsync("http://localhost:5000/", test.Timeout.Token);
-            var response2 = await test.Client.GetAsync("http://localhost:5000/", test.Timeout.Token);
-            var response3 = await test.Client.GetAsync("http://localhost:5000/", test.Timeout.Token);
+            var response1 = await test.Client.GetStringAsync("/");
+            var response2 = await test.Client.GetStringAsync("/");
+            var response3 = await test.Client.GetStringAsync("/");
 
             Assert.Equal(3, connectionIds.Distinct().Count());
 

@@ -9,7 +9,11 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests.Fixtures
 {
     public class EndPointFixture
     {
-        public IPEndPoint IPEndPoint { get; set; } 
+        public IPEndPoint IPEndPoint { get; set; }
+        
+        public string Scheme { get; set; } = "http";
+        
+        public string Address => $"{Scheme}://{IPEndPoint}";
 
         public void FindUnusedPort()
         {
