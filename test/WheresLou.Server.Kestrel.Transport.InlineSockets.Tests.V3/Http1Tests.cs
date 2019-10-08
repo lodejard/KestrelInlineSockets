@@ -137,6 +137,36 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
         }
 
         [Fact]
+        public virtual async Task ConnectionKeepAliveByDefault()
+        {
+            using var test = new TestContext();
+
+            var connectionIds = new List<string>();
+
+            test.App.OnRequest = async message =>
+            {
+                var request = message.Get<IHttpRequestFeature>();
+                var response = message.Get<IHttpResponseFeature>();
+                var connection = message.Get<IHttpConnectionFeature>();
+
+                response.Headers["Content-Type"] = "text/plain";
+
+                connectionIds.Add(connection.ConnectionId);
+
+                var bytes = Encoding.UTF8.GetBytes("Hello world!");
+                message.ResponseStream.Write(bytes, 0, bytes.Length);
+            };
+
+            await test.Server.StartAsync();
+
+            var response1 = await test.Client.GetAsync("http://localhost:5000/", test.Timeout.Token);
+            var response2 = await test.Client.GetAsync("http://localhost:5000/", test.Timeout.Token);
+            var response3 = await test.Client.GetAsync("http://localhost:5000/", test.Timeout.Token);
+
+            Assert.Equal(1, connectionIds.Distinct().Count());
+        }
+
+        [Fact]
         public virtual async Task ConnectionCloseCanBeProvided()
         {
             using var test = new TestContext();
