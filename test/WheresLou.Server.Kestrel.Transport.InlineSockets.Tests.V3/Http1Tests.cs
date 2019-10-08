@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -163,7 +164,9 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
             var response2 = await test.Client.GetAsync("http://localhost:5000/", test.Timeout.Token);
             var response3 = await test.Client.GetAsync("http://localhost:5000/", test.Timeout.Token);
 
-            Assert.Equal(1, connectionIds.Distinct().Count());
+            Assert.Single(connectionIds.Distinct());
+
+            Assert.Single(from log in test.Logging.LogItems where log.EventId.Name == "SocketAccepted" select log);
         }
 
         [Fact]
@@ -195,6 +198,8 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests
             var response3 = await test.Client.GetAsync("http://localhost:5000/", test.Timeout.Token);
 
             Assert.Equal(3, connectionIds.Distinct().Count());
+
+            Assert.Equal(3, (from log in test.Logging.LogItems where log.EventId.Name == "SocketAccepted" select log).Count());
         }
     }
 }
