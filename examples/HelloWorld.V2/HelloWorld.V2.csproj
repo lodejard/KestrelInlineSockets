@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\WheresLou.Server.Kestrel.Transport.InlineSockets\WheresLou.Server.Kestrel.Transport.InlineSockets.csproj" />
+    <ProjectReference Include="..\..\src\Microsoft.Bing.AspNetCore.Connections.InlineSocket\Microsoft.Bing.AspNetCore.Connections.InlineSocket.csproj" />
   </ItemGroup>
 
 </Project>
