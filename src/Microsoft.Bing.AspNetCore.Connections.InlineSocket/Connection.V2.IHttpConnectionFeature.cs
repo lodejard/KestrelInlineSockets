@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
+#if NETSTANDARD2_0
 using System;
 using System.Net;
 using Microsoft.AspNetCore.Http.Features;
@@ -17,26 +18,27 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
 
         IPAddress IHttpConnectionFeature.RemoteIpAddress
         {
-            get => _socketRemoteEndPoint.Address;
+            get => ((IPEndPoint)_remoteEndPoint).Address;
             set => throw new NotImplementedException();
         }
 
         IPAddress IHttpConnectionFeature.LocalIpAddress
         {
-            get => _socketLocalEndPoint.Address;
+            get => ((IPEndPoint)_localEndPoint).Address;
             set => throw new NotImplementedException();
         }
 
         int IHttpConnectionFeature.RemotePort
         {
-            get => _socketRemoteEndPoint.Port;
+            get => ((IPEndPoint)_remoteEndPoint).Port;
             set => throw new NotImplementedException();
         }
 
         int IHttpConnectionFeature.LocalPort
         {
-            get => _socketLocalEndPoint.Port;
+            get => ((IPEndPoint)_localEndPoint).Port;
             set => throw new NotImplementedException();
         }
     }
 }
+#endif

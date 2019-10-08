@@ -16,12 +16,14 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
         {
             typeof(IConnectionIdFeature),
             typeof(IConnectionItemsFeature),
-            typeof(IHttpConnectionFeature),
             typeof(IConnectionTransportFeature),
             typeof(IMemoryPoolFeature),
             typeof(IConnectionLifetimeFeature),
+#if NETSTANDARD2_0
+            typeof(IHttpConnectionFeature),
             typeof(IConnectionHeartbeatFeature),
             typeof(IConnectionLifetimeNotificationFeature),
+#endif
         };
 
         bool IFeatureCollection.IsReadOnly => true;

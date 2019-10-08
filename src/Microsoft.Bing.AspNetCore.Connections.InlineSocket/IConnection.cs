@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 using System;
+using System.Net;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http.Features;
 
@@ -9,14 +10,20 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
 {
     public interface IConnection : IDisposable, IAsyncDisposable
     {
-        string ConnectionId { get; }
-
         IFeatureCollection Features { get; }
+
+        string ConnectionId { get; set; }
+
+        EndPoint LocalEndPoint { get; set; }
+
+        EndPoint RemoteEndPoint { get; set; }
 
         void Abort(ConnectionAbortedException abortReason);
 
+#if NETSTANDARD2_0
         void OnPipeReaderComplete(Exception exception);
 
         void OnPipeWriterComplete(Exception exception);
+#endif
     }
 }

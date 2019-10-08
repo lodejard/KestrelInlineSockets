@@ -83,7 +83,9 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
                 // Return FlushResult.IsCompleted == true from now on
                 // because we assume any write exceptions are not temporary
                 _isCompleted = true;
+#if NETSTANDARD2_0
                 FireReaderCompleted(ex);
+#endif
             }
 
             return new ValueTask<FlushResult>(new FlushResult(
@@ -101,7 +103,9 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
             _logger.LogTrace(exception, "TODO: PipeWriterComplete");
 
             _isCompleted = true;
+#if NETSTANDARD2_0
             _connection.OnPipeWriterComplete(exception);
+#endif
         }
 
 #if NETSTANDARD2_0
@@ -114,10 +118,6 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
         {
             _readerCompletedException = exception;
             _readerCompleted.Cancel();
-        }
-#else
-        private void FireReaderCompleted(Exception exception)
-        {
         }
 #endif
     }

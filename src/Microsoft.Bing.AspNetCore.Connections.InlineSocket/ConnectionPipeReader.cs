@@ -101,7 +101,9 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
                 // Return ReadResult.IsCompleted == true from now on
                 // because we assume any read exceptions are not temporary
                 _isCompleted = true;
+#if NETSTANDARD2_0
                 FireWriterCompleted(ex);
+#endif
             }
 
             return new ReadResult(
@@ -134,7 +136,9 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
             _logger.LogTrace(exception, "TODO: PipeReaderComplete");
 
             _isCompleted = true;
+#if NETSTANDARD2_0
             _connection.OnPipeReaderComplete(exception);
+#endif
         }
 
 #if NETSTANDARD2_0
@@ -147,10 +151,6 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
         {
             _writerCompletedException = exception;
             _writerCompleted.Cancel();
-        }
-#else
-        public void FireWriterCompleted(Exception exception)
-        {
         }
 #endif
     }

@@ -18,8 +18,6 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
     public class ConnectionContext : Microsoft.AspNetCore.Connections.ConnectionContext
     {
         private readonly IConnection _connection;
-        private FeatureReference<IConnectionIdFeature> _connectionIdFeature;
-        private FeatureReference<IHttpConnectionFeature> _httpConnectionFeature;
         private FeatureReference<IConnectionItemsFeature> _connectionItemsFeature;
         private FeatureReference<IConnectionTransportFeature> _connectionTransportFeature;
         private FeatureReference<IConnectionLifetimeFeature> _connectionLifetimeFeature;
@@ -33,8 +31,8 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
 
         public override string ConnectionId
         {
-            get => _connectionIdFeature.Fetch(Features).ConnectionId;
-            set => _connectionIdFeature.Fetch(Features).ConnectionId = value;
+            get => _connection.ConnectionId;
+            set => _connection.ConnectionId = value;
         }
 
         public override IDictionary<object, object> Items
@@ -57,34 +55,14 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
 
         public override EndPoint LocalEndPoint
         {
-            get
-            {
-                var feature = _httpConnectionFeature.Fetch(Features);
-                return new IPEndPoint(feature.LocalIpAddress, feature.LocalPort);
-            }
-
-            set
-            {
-                var feature = _httpConnectionFeature.Fetch(Features);
-                feature.LocalIpAddress = ((IPEndPoint)value).Address;
-                feature.LocalPort = ((IPEndPoint)value).Port;
-            }
+            get => _connection.LocalEndPoint;
+            set => _connection.LocalEndPoint = value;
         }
 
         public override EndPoint RemoteEndPoint
         {
-            get
-            {
-                var feature = _httpConnectionFeature.Fetch(Features);
-                return new IPEndPoint(feature.RemoteIpAddress, feature.RemotePort);
-            }
-
-            set
-            {
-                var feature = _httpConnectionFeature.Fetch(Features);
-                feature.RemoteIpAddress = ((IPEndPoint)value).Address;
-                feature.RemotePort = ((IPEndPoint)value).Port;
-            }
+            get => _connection.RemoteEndPoint;
+            set => _connection.RemoteEndPoint = value;
         }
 
         public override void Abort()
