@@ -28,6 +28,10 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests.Fixtures
 
         public void Dispose()
         {
+            foreach(var log in LogItems)
+            {
+                Console.WriteLine($"{log.LogLevel} {log.CategoryName}.{log.EventId} {log.Message}");
+            }
         }
 
         public void Record(string categoryName, LogLevel logLevel, EventId eventId, IReadOnlyCollection<KeyValuePair<string, object>> properties, Exception exception, string message)

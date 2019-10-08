@@ -102,6 +102,12 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
                         // A call was made to UnbindAsync/DisposeAsync just return null which signals we're done
                         return null;
                     }
+                    catch (InvalidOperationException)
+                    {
+                        // Stopping the server immediately can cause this exception
+                        // "Not listening. You must call the Start() method before calling this method."
+                        return null;
+                    }
                     catch (SocketException)
                     {
                         // The connection got reset while it was in the backlog, so we try again.

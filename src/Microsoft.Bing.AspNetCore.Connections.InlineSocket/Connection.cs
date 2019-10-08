@@ -79,6 +79,9 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
         {
             _logger.LogDebug(abortReason, "TODO: AbortRequested {ConnectionId}", ConnectionId);
 
+            // immediate FIN so client understands server will not complete current response or accept subsequent requests
+            _socket.ShutdownSend();
+
             // stop any additional data from arriving
             _connectionPipeReader.CancelPendingRead();
         }

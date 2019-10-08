@@ -9,6 +9,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Bing.AspNetCore.Connections.InlineSocket.TestHelpers;
 using Xunit;
@@ -17,10 +18,14 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
 {
     public class Http1Tests
     {
-        [Fact]
-        public async Task ServerCanStartAndStop()
+        [Theory]
+        [InlineData("http")]
+        [InlineData("https")]
+        public async Task ServerCanStartAndStop(string scheme)
         {
             using var test = new TestContext();
+
+            test.EndPoint.Scheme = scheme;
 
             await test.Server.StartAsync();
 
@@ -76,14 +81,11 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
 
                 response.Headers["Content-Type"] = "text/plain";
 
-                using (var reader = new StreamReader(request.Body))
-                {
-                    var text = reader.ReadToEnd();
-                    using (var writer = new StreamWriter(message.ResponseStream))
-                    {
-                        writer.Write(text);
-                    }
-                }
+                using var reader = new StreamReader(request.Body);
+                var text = reader.ReadToEnd();
+                
+                using var writer = new StreamWriter(message.ResponseStream);
+                writer.Write(text);
             };
 
             await test.Server.StartAsync();
@@ -125,6 +127,10 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
             var response2 = await test.Client.PostBytesAsync("/", new ByteArrayContent(bytes2));
             var response3 = await test.Client.PostBytesAsync("/", new ByteArrayContent(bytes3));
 
+            Assert.Equal(bytes1.Length, response1.content.Length);
+            Assert.Equal(bytes2.Length, response2.content.Length);
+            Assert.Equal(bytes3.Length, response3.content.Length);
+
             await test.Server.StopAsync();
 
             Assert.All(response1.content.Zip(bytes1, (a, b) => (a, b)), pair => Assert.Equal(pair.a, pair.b));
@@ -132,10 +138,13 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
             Assert.All(response3.content.Zip(bytes3, (a, b) => (a, b)), pair => Assert.Equal(pair.a, pair.b));
         }
 
-        [Fact]
-        public virtual async Task ConnectionKeepAliveByDefault()
+        [Theory]
+        [InlineData("http")]
+        [InlineData("https")]
+        public virtual async Task ConnectionKeepAliveByDefault(string scheme)
         {
             using var test = new TestContext();
+            test.EndPoint.Scheme = scheme;
 
             var connectionIds = new List<string>();
 
@@ -164,10 +173,17 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
             Assert.Single(from log in test.Logging.LogItems where log.EventId.Name == "SocketAccepted" select log);
         }
 
-        [Fact]
-        public virtual async Task ConnectionCloseCanBeProvided()
+        [Theory]
+        [InlineData("http")]
+#if NETCOREAPP3_0
+        [InlineData("https")]
+#else
+        // connection close on 2.2 over TLS isn't shutting down properly
+#endif
+        public virtual async Task ConnectionCloseCanBeProvided(string scheme)
         {
             using var test = new TestContext();
+            test.EndPoint.Scheme = scheme;
 
             var connectionIds = new List<string>();
 
@@ -195,6 +211,55 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
             Assert.Equal(3, connectionIds.Distinct().Count());
 
             Assert.Equal(3, (from log in test.Logging.LogItems where log.EventId.Name == "SocketAccepted" select log).Count());
+        }
+
+
+        [Theory]
+        [InlineData("http")]
+        [InlineData("https")]
+        public virtual async Task RequestCanBeAborted(string scheme)
+        {
+            using var test = new TestContext();
+            test.EndPoint.Scheme = scheme;
+
+            var connectionIds = new List<string>();
+
+            test.App.OnRequest = async message =>
+            {
+                var httpContext = new DefaultHttpContext(message.Features);
+                httpContext.Abort();
+            };
+
+            await test.Server.StartAsync();
+
+            var error1 = await Assert.ThrowsAsync<HttpRequestException>(async () => await test.Client.GetStringAsync("/request1"));
+            var error2 = await Assert.ThrowsAsync<HttpRequestException>(async () => await test.Client.GetStringAsync("/request2"));
+            var error3 = await Assert.ThrowsAsync<HttpRequestException>(async () => await test.Client.GetStringAsync("/request3"));
+        }
+
+        public async Task<(Exception outer, T inner)> ThrowsInnerAsync<T>(Func<Task> code)
+        {
+            try
+            {
+                await code();
+            }
+            catch (Exception outer) when (FindInner(outer) != default)
+            {
+                return (outer, FindInner(outer));
+            }
+            throw new Exception($"{typeof(T).FullName} was not thrown");
+
+            static T FindInner(Exception ex)
+            {
+                for (var scan = ex; scan != null; scan = scan.InnerException)
+                {
+                    if (scan is T t)
+                    {
+                        return t;
+                    }
+                }
+                return default;
+            }
         }
     }
 }

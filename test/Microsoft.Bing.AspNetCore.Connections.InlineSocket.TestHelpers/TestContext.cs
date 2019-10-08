@@ -19,7 +19,6 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.TestHelpers
                 .AddSingleton<ServerFixture>()
                 .AddSingleton<ServicesFixture>()
                 .AddSingleton<TimeoutFixture>()
-                .AddSingleton<HttpClient>()
                 .AddSingleton<OptionsFixture>()
                 .AddSingleton<ClientFixture>()
                 .BuildServiceProvider();

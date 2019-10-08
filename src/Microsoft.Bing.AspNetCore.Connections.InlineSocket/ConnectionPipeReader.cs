@@ -57,20 +57,12 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
 
         public override async ValueTask<ReadResult> ReadAsync(CancellationToken cancellationToken)
         {
-            // TODO: return unexamined memory immediately
-            if (_bufferHasUnexaminedData)
+            if (_bufferHasUnexaminedData == false &&
+                IsCompleted == false)
             {
-                return new ReadResult(
-                    _buffer.GetOccupiedMemory(),
-                    isCanceled: IsCanceled,
-                    isCompleted: IsCompleted);
-            }
-
-            try
-            {
-                if (!IsCompleted)
+                try
                 {
-                    // TODO: better size hint?
+                    // memory based on default page size for MemoryPool being used
                     var memory = _buffer.GetTrailingMemory();
 
                     _logger.LogTrace("TODO: ReadStarting");
@@ -79,31 +71,37 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
 
                     if (bytes != 0)
                     {
-                        var text = Encoding.UTF8.GetString(memory.Slice(0, bytes).ToArray());
-                        _bufferHasUnexaminedData = true;
+                        // advance rolling memory based on number of bytes received
                         _buffer.TrailingMemoryFilled(bytes);
+
+                        // the new bytes have not been examined yet. this flag
+                        // is true until the parser calls AdvanceTo with
+                        // an examined SequencePosition corresponding to the tail
+                        _bufferHasUnexaminedData = true;
                     }
                     else
                     {
+                        // reading 0 bytes means the remote client has
+                        // sent FIN and no more bytes will be received
                         _isCompleted = true;
                     }
                 }
-            }
-            catch (TaskCanceledException)
-            {
-                _logger.LogTrace("TODO: ReadCanceled");
-                _isCanceled = true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogTrace("TODO: ReadFailed");
+                catch (TaskCanceledException)
+                {
+                    _logger.LogTrace("TODO: ReadCanceled");
+                    _isCanceled = true;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogTrace(ex, "TODO: ReadFailed");
 
-                // Return ReadResult.IsCompleted == true from now on
-                // because we assume any read exceptions are not temporary
-                _isCompleted = true;
+                    // Return ReadResult.IsCompleted == true from now on
+                    // because we assume any read exceptions are not temporary
+                    _isCompleted = true;
 #if NETSTANDARD2_0
-                FireWriterCompleted(ex);
+                    FireWriterCompleted(ex);
 #endif
+                }
             }
 
             return new ReadResult(

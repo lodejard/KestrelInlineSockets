@@ -1,21 +1,46 @@
 using System;
 using System.Net.Http;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests.Fixtures;
 
 namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.TestHelpers.Fixtures
 {
-    public class ClientFixture
+    public class ClientFixture : IDisposable
     {
         private readonly EndPointFixture _endPoint;
-        private readonly HttpClient _httpClient;
         private readonly TimeoutFixture _timeout;
+        private readonly HttpClient _httpClient;
 
-        public ClientFixture(EndPointFixture endPoint, HttpClient httpClient, TimeoutFixture timeout)
+        public ClientFixture(EndPointFixture endPoint, TimeoutFixture timeout)
         {
             _endPoint = endPoint;
-            _httpClient = httpClient;
             _timeout = timeout;
+
+#if NETSTANDARD2_0
+            HttpMessageHandler handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (sender, certificate, chain, errors) => RemoteCertificateValidation(certificate, chain, errors),
+            };
+#else
+            HttpMessageHandler handler = new SocketsHttpHandler
+            {
+                SslOptions =
+                {
+                    RemoteCertificateValidationCallback = (sender, certificate, chain, errors) => RemoteCertificateValidation(certificate, chain, errors),
+                }
+            };
+#endif
+
+            _httpClient = new HttpClient(handler, disposeHandler: true);
+        }
+
+        public Func<X509Certificate, X509Chain, SslPolicyErrors, bool> RemoteCertificateValidation { get; set; } = (certificate, chain, errors) => true;
+
+        public void Dispose()
+        {
+            _httpClient.Dispose();
         }
 
         public async Task<HttpResponseMessage> GetAsync(string path)
@@ -36,13 +61,13 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.TestHelpers.Fixture
 
         public async Task<(HttpResponseMessage response, string content)> PostStringAsync(string path, HttpContent content)
         {
-            var response = await GetAsync(path);
+            var response = await PostAsync(path, content);
             return (response, await response.Content.ReadAsStringAsync());
         }
 
         public async Task<(HttpResponseMessage response, byte[] content)> PostBytesAsync(string path, HttpContent content)
         {
-            var response = await GetAsync(path);
+            var response = await PostAsync(path, content);
             return (response, await response.Content.ReadAsByteArrayAsync());
         }
     }
