@@ -108,7 +108,7 @@ namespace WheresLou.Server.Kestrel.Transport.InlineSockets.Tests.Fixtures
 
             public string Message { get; internal set; }
 
-            public object Properties { get; internal set; }
+            public IDictionary<string, object> Properties { get; internal set; }
 
             public override string ToString()
             {
