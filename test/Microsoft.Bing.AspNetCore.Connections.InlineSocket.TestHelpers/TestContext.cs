@@ -21,6 +21,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.TestHelpers
                 .AddSingleton<TimeoutFixture>()
                 .AddSingleton<HttpClient>()
                 .AddSingleton<OptionsFixture>()
+                .AddSingleton<ClientFixture>()
                 .BuildServiceProvider();
         }
 
@@ -30,8 +31,8 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.TestHelpers
         public ServerFixture Server => _fixtures.GetService<ServerFixture>();
         public ServicesFixture Services => _fixtures.GetService<ServicesFixture>();
         public TimeoutFixture Timeout => _fixtures.GetService<TimeoutFixture>();
-        public HttpClient Client => _fixtures.GetService<HttpClient>();
         public OptionsFixture Options => _fixtures.GetService<OptionsFixture>();
+        public ClientFixture Client => _fixtures.GetService<ClientFixture>();
 
         public void Dispose()
         {

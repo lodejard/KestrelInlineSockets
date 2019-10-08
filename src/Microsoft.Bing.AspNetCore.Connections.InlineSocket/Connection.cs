@@ -56,7 +56,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
 
         public virtual string ConnectionId
         {
-            get => _connectionId ?? Interlocked.CompareExchange(ref _connectionId, CorrelationIdGenerator.GetNextId(), null);
+            get => _connectionId ?? Interlocked.CompareExchange(ref _connectionId, CorrelationIdGenerator.GetNextId(), null) ?? _connectionId;
             set => _connectionId = value;
         }
 
