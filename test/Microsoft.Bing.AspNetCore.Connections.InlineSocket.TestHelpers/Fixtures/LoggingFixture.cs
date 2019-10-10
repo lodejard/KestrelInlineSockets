@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests.Fixtures
 {
-    public class LoggingFixture : IDisposable
+    public class LoggingFixture
     {
         public List<LogItem> LogItems { get; } = new List<LogItem>();
 
@@ -26,11 +26,11 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests.Fixtures
             });
         }
 
-        public void Dispose()
+        public void WriteTo(Action<string> writeLine)
         {
-            foreach(var log in LogItems)
+            foreach (var log in LogItems)
             {
-                Console.WriteLine($"{log.LogLevel} {log.CategoryName}.{log.EventId} {log.Message}");
+                writeLine($"{log.LogLevel} {log.CategoryName}.{log.EventId} {log.Message}");
             }
         }
 
@@ -68,8 +68,8 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests.Fixtures
 
         public class Logger : ILogger
         {
-            private LoggingFixture _fixture;
-            private string _categoryName;
+            private readonly LoggingFixture _fixture;
+            private readonly string _categoryName;
 
             public Logger(LoggingFixture fixture, string categoryName)
             {

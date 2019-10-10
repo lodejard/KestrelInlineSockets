@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
-
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -39,6 +38,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
             var remoteIPEndPoint = (IPEndPoint)connection.RemoteEndPoint;
             Assert.Equal(localIPEndPoint.Port, remoteIPEndPoint.Port);
 
+            client.Dispose();
             await connection.DisposeAsync();
             await listener.DisposeAsync();
         }

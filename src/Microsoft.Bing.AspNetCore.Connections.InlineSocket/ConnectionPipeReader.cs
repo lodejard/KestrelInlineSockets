@@ -19,14 +19,15 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
         private readonly IConnection _connection;
         private readonly INetworkSocket _socket;
         private readonly RollingMemory _buffer;
-        private readonly CancellationTokenSource _writerCompleted;
+
+#if NETSTANDARD2_0
+        private readonly CancellationTokenSource _writerCompleted = new CancellationTokenSource();
+        private Exception _writerCompletedException;
+#endif
 
         private bool _bufferHasUnexaminedData;
         private bool _isCanceled;
         private bool _isCompleted;
-#if NETSTANDARD2_0
-        private Exception _writerCompletedException;
-#endif
 
         public ConnectionPipeReader(
             IConnectionLogger logger,
@@ -38,7 +39,6 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
             _connection = connection;
             _socket = socket;
             _buffer = new RollingMemory(options.MemoryPool);
-            _writerCompleted = new CancellationTokenSource();
         }
 
         public bool IsCanceled => _isCanceled;
@@ -48,6 +48,9 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
         public void Dispose()
         {
             _buffer.Dispose();
+#if NETSTANDARD2_0
+            _writerCompleted.Dispose();
+#endif
         }
 
         public override bool TryRead(out ReadResult result)
@@ -84,12 +87,14 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
                         // reading 0 bytes means the remote client has
                         // sent FIN and no more bytes will be received
                         _isCompleted = true;
+                        _connection.FireConnectionClosed();
                     }
                 }
                 catch (TaskCanceledException)
                 {
                     _logger.LogTrace("TODO: ReadCanceled");
                     _isCanceled = true;
+                    _connection.FireConnectionClosed();
                 }
                 catch (Exception ex)
                 {
@@ -98,6 +103,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
                     // Return ReadResult.IsCompleted == true from now on
                     // because we assume any read exceptions are not temporary
                     _isCompleted = true;
+                    _connection.FireConnectionClosed();
 #if NETSTANDARD2_0
                     FireWriterCompleted(ex);
 #endif

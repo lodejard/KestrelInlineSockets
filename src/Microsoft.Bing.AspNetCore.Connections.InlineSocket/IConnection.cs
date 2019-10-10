@@ -20,6 +20,8 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
 
         void Abort(ConnectionAbortedException abortReason);
 
+        void FireConnectionClosed();
+
 #if NETSTANDARD2_0
         void OnPipeReaderComplete(Exception exception);
 

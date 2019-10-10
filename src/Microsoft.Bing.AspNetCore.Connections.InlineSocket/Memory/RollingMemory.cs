@@ -114,7 +114,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Memory
             if (_firstSegment == null && _lastSegment == null)
             {
                 var rental = _memoryPool.Rent(sizeHint);
-                var segment = new RollingMemorySegment(rental, 0, 0);
+                var segment = new RollingMemorySegment(rental, 0);
                 _firstSegment = segment;
                 _lastSegment = segment;
                 return rental.Memory;
@@ -135,8 +135,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Memory
                 var rental = _memoryPool.Rent(sizeHint);
                 _lastSegment.Next = new RollingMemorySegment(
                     rental,
-                    _lastSegment.RunningIndex + _lastSegment.Memory.Length,
-                    _lastSegment.RunningOrdinal + 1);
+                    _lastSegment.RunningIndex + _lastIndex);
                 _lastSegment = _lastSegment.Next;
                 _lastIndex = 0;
                 return rental.Memory;

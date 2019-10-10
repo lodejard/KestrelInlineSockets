@@ -11,8 +11,9 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Network
         private readonly TcpListener _listener;
         private readonly int? _listenerBacklog;
         private readonly bool? _socketNoDelay;
+        private readonly Extensions.Logging.ILogger<NetworkProvider> _logger;
 
-        public NetworkListener(NetworkListenerSettings settings)
+        public NetworkListener(Extensions.Logging.ILogger<NetworkProvider> logger, NetworkListenerSettings settings)
         {
             // TODO: logic to bind ipv4 and/or ipv6 ?
             _listener = new TcpListener(settings.IPEndPoint);
@@ -29,6 +30,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Network
 
             _listenerBacklog = settings.ListenerBacklog;
             _socketNoDelay = settings.NoDelay;
+            _logger = logger;
         }
 
         public virtual void Dispose()
@@ -61,7 +63,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Network
                 socket.NoDelay = _socketNoDelay.Value;
             }
 
-            return new NetworkSocket(socket);
+            return new NetworkSocket(_logger, socket);
         }
     }
 }

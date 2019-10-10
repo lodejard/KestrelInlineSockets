@@ -47,7 +47,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
             if (connectionClosed)
             {
                 // signal all tranceiving is complete
-                _connectionClosedTokenSource.Cancel(throwOnFirstException: false);
+                ((IConnection)this).FireConnectionClosed();
             }
             else if (readerRemaining)
             {

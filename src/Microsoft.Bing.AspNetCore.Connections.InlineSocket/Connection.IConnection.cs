@@ -5,6 +5,7 @@ using System;
 using System.Net;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
 {
@@ -33,6 +34,11 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
         void IConnection.Abort(ConnectionAbortedException abortReason)
         {
             OnAbortRequested(abortReason);
+        }
+
+        void IConnection.FireConnectionClosed()
+        {
+            _connectionClosedTokenSource.Cancel();
         }
     }
 }

@@ -9,18 +9,18 @@ using System.Threading.Tasks;
 
 namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Network
 {
-    public interface INetworkSocket : IDisposable
+    public interface INetworkSocket : IDisposable, IAsyncDisposable
     {
         IPEndPoint LocalEndPoint { get; }
 
         IPEndPoint RemoteEndPoint { get; }
 
-        int Send(ReadOnlySequence<byte> buffers);
-
-        void ShutdownSend();
-
         Task<int> ReceiveAsync(Memory<byte> buffers, CancellationToken cancellationToken);
 
         void CancelPendingRead();
+
+        int Send(ReadOnlySequence<byte> buffers);
+
+        void ShutdownSend();
     }
 }

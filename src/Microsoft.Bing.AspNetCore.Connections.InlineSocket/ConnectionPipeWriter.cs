@@ -15,16 +15,17 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
     public class ConnectionPipeWriter : PipeWriter, IDisposable
     {
         private readonly IConnectionLogger _logger;
-        private readonly IConnection _connection;
         private readonly INetworkSocket _socket;
-        private readonly CancellationTokenSource _readerCompleted;
         private readonly RollingMemory _buffer;
+
+#if NETSTANDARD2_0
+        private readonly IConnection _connection;
+        private readonly CancellationTokenSource _readerCompleted = new CancellationTokenSource();
+        private Exception _readerCompletedException;
+#endif
 
         private bool _isCanceled;
         private bool _isCompleted;
-#if NETSTANDARD2_0
-        private Exception _readerCompletedException;
-#endif
 
         public ConnectionPipeWriter(
             IConnectionLogger logger,
@@ -33,9 +34,10 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
             INetworkSocket socket)
         {
             _logger = logger;
+#if NETSTANDARD2_0
             _connection = connection;
+#endif
             _socket = socket;
-            _readerCompleted = new CancellationTokenSource();
             _buffer = new RollingMemory(options.MemoryPool);
         }
 
@@ -46,6 +48,9 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
         public void Dispose()
         {
             _buffer.Dispose();
+#if NETSTANDARD2_0
+            _readerCompleted.Dispose();
+#endif
         }
 
         public override Memory<byte> GetMemory(int sizeHint)
@@ -80,7 +85,9 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
             }
             catch (Exception ex)
             {
-                // Return FlushResult.IsCompleted == true from now on
+                _logger.LogTrace(ex, "TODO: SendError");
+
+                // Return FlushResult.IsCompleted true from now on
                 // because we assume any write exceptions are not temporary
                 _isCompleted = true;
 #if NETSTANDARD2_0

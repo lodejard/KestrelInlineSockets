@@ -43,6 +43,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
             _connectionPipeWriter = options.CreatePipeWriter(this, socket);
 
             _connectionClosedTokenSource = new CancellationTokenSource();
+            _connectionClosedTokenSource.Token.Register(() => _logger.LogTrace("TODO: ConnectionClosed"));
 
             _remoteEndPoint = _socket.RemoteEndPoint;
             _localEndPoint = _socket.LocalEndPoint;
@@ -54,6 +55,15 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
         {
             get => _connectionId ?? Interlocked.CompareExchange(ref _connectionId, CorrelationIdGenerator.GetNextId(), null) ?? _connectionId;
             set => _connectionId = value;
+        }
+
+        async ValueTask IAsyncDisposable.DisposeAsync()
+        {
+            _logger.LogDebug("TODO: DisposeAsync {ConnectionId}", ConnectionId);
+
+            await _socket.DisposeAsync();
+
+            ((IDisposable)this).Dispose();
         }
 
         void IDisposable.Dispose()
@@ -68,11 +78,6 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
 #if NETSTANDARD2_0
             _connectionCloseRequestedSource.Dispose();
 #endif
-        }
-
-        async ValueTask IAsyncDisposable.DisposeAsync()
-        {
-            ((IDisposable)this).Dispose();
         }
 
         private void OnAbortRequested(ConnectionAbortedException abortReason)
