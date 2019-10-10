@@ -17,7 +17,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
 
         void IConnectionLifetimeFeature.Abort()
         {
-            OnAbortRequested(null);
+            Abort(null);
         }
     }
 }

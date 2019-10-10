@@ -16,7 +16,6 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
 {
     public partial class Connection : IConnection
     {
-        private readonly IFeatureCollection _features;
         private readonly IConnectionLogger _logger;
         private readonly InlineSocketsOptions _options;
         private readonly INetworkSocket _socket;
@@ -25,8 +24,6 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
         private readonly CancellationTokenSource _connectionClosedTokenSource;
 
         private string _connectionId;
-        private EndPoint _remoteEndPoint;
-        private EndPoint _localEndPoint;
         private IDuplexPipe _transport;
 
         public Connection(
@@ -34,22 +31,22 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
             InlineSocketsOptions options,
             INetworkSocket socket)
         {
-            _features = new FeatureCollection(this);
+            Features = new FeatureCollection(this);
             _logger = logger;
             _options = options;
             _socket = socket;
+            RemoteEndPoint = _socket.RemoteEndPoint;
+            LocalEndPoint = _socket.LocalEndPoint;
+
             _transport = this;
             _connectionPipeReader = options.CreatePipeReader(this, socket);
             _connectionPipeWriter = options.CreatePipeWriter(this, socket);
 
             _connectionClosedTokenSource = new CancellationTokenSource();
             _connectionClosedTokenSource.Token.Register(() => _logger.LogTrace("TODO: ConnectionClosed"));
-
-            _remoteEndPoint = _socket.RemoteEndPoint;
-            _localEndPoint = _socket.LocalEndPoint;
         }
 
-        public IFeatureCollection Features => _features;
+        public virtual IFeatureCollection Features { get; private set; }
 
         public virtual string ConnectionId
         {
@@ -57,7 +54,11 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
             set => _connectionId = value;
         }
 
-        async ValueTask IAsyncDisposable.DisposeAsync()
+        public virtual EndPoint LocalEndPoint { get; set; }
+
+        public virtual EndPoint RemoteEndPoint { get; set; }
+
+        public virtual async ValueTask DisposeAsync()
         {
             _logger.LogDebug("TODO: DisposeAsync {ConnectionId}", ConnectionId);
 
@@ -66,7 +67,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
             ((IDisposable)this).Dispose();
         }
 
-        void IDisposable.Dispose()
+        public virtual void Dispose()
         {
             _logger.LogDebug("TODO: Dispose {ConnectionId}", ConnectionId);
 
@@ -80,12 +81,18 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
 #endif
         }
 
-        private void OnAbortRequested(ConnectionAbortedException abortReason)
+        public virtual void FireConnectionClosed()
         {
-            _logger.LogDebug(abortReason, "TODO: AbortRequested {ConnectionId}", ConnectionId);
+            _connectionClosedTokenSource.Cancel();
+        }
+
+        public virtual void Abort(ConnectionAbortedException abortReason)
+        {
+            _logger.LogDebug(abortReason, "TODO: Abort {ConnectionId}", ConnectionId);
 
             // immediate FIN so client understands server will not complete current response or accept subsequent requests
-            _socket.ShutdownSend();
+            //_socket.ShutdownSend();
+            _socket.Dispose();
 
             // stop any additional data from arriving
             _connectionPipeReader.CancelPendingRead();

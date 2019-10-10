@@ -23,6 +23,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Network
         private TaskCompletionSource<int> _receiveAsyncTaskSource;
         private TaskCompletionSource<int> _receiveAsyncTaskSourceCache;
         private int _disposed;
+        private bool _pendingReadCanceled;
 
         public NetworkSocket(Extensions.Logging.ILogger<NetworkProvider> logger, Socket socket)
         {
@@ -56,7 +57,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Network
         {
             if (Interlocked.Exchange(ref _disposed, 1) == 0)
             {
-                _logger.LogTrace("TODO: DisconnectAsync");
+                _logger.LogTrace("TODO: DisposeAsync");
 
                 if (_socket.Connected)
                 {
@@ -83,6 +84,16 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Network
 
             lock (_receiveSync)
             {
+                if (_pendingReadCanceled)
+                {
+                    ThrowTaskCanceledException();
+
+                    static void ThrowTaskCanceledException()
+                    {
+                        throw new TaskCanceledException();
+                    }
+                }
+
                 _receiveEventArgs.SetBuffer(segment.Array, segment.Offset, segment.Count);
 
                 if (_receiveAsyncTaskSource != null)
@@ -158,6 +169,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Network
 
             lock (_receiveSync)
             {
+                _pendingReadCanceled = true;
                 receiveAsyncTaskSource = _receiveAsyncTaskSource;
                 _receiveAsyncTaskSource = null;
             }

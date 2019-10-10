@@ -18,25 +18,25 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
 
         IPAddress IHttpConnectionFeature.RemoteIpAddress
         {
-            get => ((IPEndPoint)_remoteEndPoint).Address;
+            get => ((IPEndPoint)RemoteEndPoint).Address;
             set => throw new NotImplementedException();
         }
 
         IPAddress IHttpConnectionFeature.LocalIpAddress
         {
-            get => ((IPEndPoint)_localEndPoint).Address;
+            get => ((IPEndPoint)LocalEndPoint).Address;
             set => throw new NotImplementedException();
         }
 
         int IHttpConnectionFeature.RemotePort
         {
-            get => ((IPEndPoint)_remoteEndPoint).Port;
+            get => ((IPEndPoint)RemoteEndPoint).Port;
             set => throw new NotImplementedException();
         }
 
         int IHttpConnectionFeature.LocalPort
         {
-            get => ((IPEndPoint)_localEndPoint).Port;
+            get => ((IPEndPoint)LocalEndPoint).Port;
             set => throw new NotImplementedException();
         }
     }

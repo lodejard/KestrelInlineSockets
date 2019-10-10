@@ -76,9 +76,9 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
                 {
                     var memory = _buffer.GetOccupiedMemory();
 
-                    _logger.LogTrace("TODO: SendStarting");
+                    _logger.LogTrace("TODO: SendStarting {bytes}", memory.Length);
                     var bytes = _socket.Send(memory);
-                    _logger.LogTrace("TODO: SendComplete");
+                    _logger.LogTrace("TODO: SendComplete {bytes}", bytes);
 
                     _buffer.ConsumeOccupiedMemory(bytes);
                 }

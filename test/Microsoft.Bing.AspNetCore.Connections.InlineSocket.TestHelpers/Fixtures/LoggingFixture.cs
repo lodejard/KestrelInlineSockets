@@ -28,14 +28,28 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests.Fixtures
 
         public void WriteTo(Action<string> writeLine)
         {
-            foreach (var log in LogItems)
+            var error = default(Exception);
+            foreach (var log in LogItems.ToArray())
             {
                 writeLine($"{log.LogLevel} {log.CategoryName}.{log.EventId} {log.Message}");
+
+                if (log.EventId.Name == "NotAllConnectionsClosedGracefully")
+                {
+                    error = new Exception("NotAllConnectionsClosedGracefully");
+                }
+            }
+            if (error != default)
+            {
+                throw error;
             }
         }
 
         public void Record(string categoryName, LogLevel logLevel, EventId eventId, IReadOnlyCollection<KeyValuePair<string, object>> properties, Exception exception, string message)
         {
+            if (eventId.Name == "NotAllConnectionsClosedGracefully")
+            {
+                var x = 5;
+            }
             LogItems.Add(new LogItem
             {
                 CategoryName = categoryName,

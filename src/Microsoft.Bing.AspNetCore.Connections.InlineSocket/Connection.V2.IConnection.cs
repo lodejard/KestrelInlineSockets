@@ -47,7 +47,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
             if (connectionClosed)
             {
                 // signal all tranceiving is complete
-                ((IConnection)this).FireConnectionClosed();
+                FireConnectionClosed();
             }
             else if (readerRemaining)
             {
