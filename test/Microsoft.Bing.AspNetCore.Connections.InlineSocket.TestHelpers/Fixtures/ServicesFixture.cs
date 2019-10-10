@@ -13,7 +13,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests.Fixtures
     {
         private readonly ServiceProvider _serviceProvider;
 
-        public ServicesFixture(LoggingFixture loggingFixture = null)
+        public ServicesFixture(LoggingFixture loggingFixture)
         {
             _serviceProvider = new ServiceCollection()
                 .AddInlineSocketsTransport()

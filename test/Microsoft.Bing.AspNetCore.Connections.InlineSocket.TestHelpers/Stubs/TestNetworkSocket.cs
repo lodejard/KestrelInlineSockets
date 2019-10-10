@@ -20,6 +20,8 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests.Stubs
 
         public void Dispose() => IsDisposed = true;
 
+        public async ValueTask DisposeAsync() => Dispose();
+
         public void CancelPendingRead()
         {
             throw new NotImplementedException();

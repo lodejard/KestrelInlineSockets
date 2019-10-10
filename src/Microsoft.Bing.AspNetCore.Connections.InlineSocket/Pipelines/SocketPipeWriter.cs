@@ -10,32 +10,34 @@ using Microsoft.Bing.AspNetCore.Connections.InlineSocket.Memory;
 using Microsoft.Bing.AspNetCore.Connections.InlineSocket.Network;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
+namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Pipelines
 {
-    public class ConnectionPipeWriter : PipeWriter, IDisposable
+    public class SocketPipeWriter : PipeWriter, IDisposable
     {
         private readonly IConnectionLogger _logger;
-        private readonly IConnection _connection;
         private readonly INetworkSocket _socket;
-        private readonly CancellationTokenSource _readerCompleted;
         private readonly RollingMemory _buffer;
 
-        private bool _isCanceled;
-        private bool _isCompleted;
 #if NETSTANDARD2_0
+        private readonly IConnection _connection;
+        private readonly CancellationTokenSource _readerCompleted = new CancellationTokenSource();
         private Exception _readerCompletedException;
 #endif
 
-        public ConnectionPipeWriter(
+        private bool _isCanceled;
+        private bool _isCompleted;
+
+        public SocketPipeWriter(
             IConnectionLogger logger,
             InlineSocketsOptions options,
             IConnection connection,
             INetworkSocket socket)
         {
             _logger = logger;
+#if NETSTANDARD2_0
             _connection = connection;
+#endif
             _socket = socket;
-            _readerCompleted = new CancellationTokenSource();
             _buffer = new RollingMemory(options.MemoryPool);
         }
 
@@ -46,6 +48,9 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
         public void Dispose()
         {
             _buffer.Dispose();
+#if NETSTANDARD2_0
+            _readerCompleted.Dispose();
+#endif
         }
 
         public override Memory<byte> GetMemory(int sizeHint)
@@ -71,19 +76,23 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
                 {
                     var memory = _buffer.GetOccupiedMemory();
 
-                    _logger.LogTrace("TODO: SendStarting");
+                    _logger.LogTrace("TODO: SendStarting {bytes}", memory.Length);
                     var bytes = _socket.Send(memory);
-                    _logger.LogTrace("TODO: SendComplete");
+                    _logger.LogTrace("TODO: SendComplete {bytes}", bytes);
 
                     _buffer.ConsumeOccupiedMemory(bytes);
                 }
             }
             catch (Exception ex)
             {
-                // Return FlushResult.IsCompleted == true from now on
+                _logger.LogTrace(ex, "TODO: SendError");
+
+                // Return FlushResult.IsCompleted true from now on
                 // because we assume any write exceptions are not temporary
                 _isCompleted = true;
+#if NETSTANDARD2_0
                 FireReaderCompleted(ex);
+#endif
             }
 
             return new ValueTask<FlushResult>(new FlushResult(
@@ -101,7 +110,9 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
             _logger.LogTrace(exception, "TODO: PipeWriterComplete");
 
             _isCompleted = true;
+#if NETSTANDARD2_0
             _connection.OnPipeWriterComplete(exception);
+#endif
         }
 
 #if NETSTANDARD2_0
@@ -114,10 +125,6 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
         {
             _readerCompletedException = exception;
             _readerCompleted.Cancel();
-        }
-#else
-        private void FireReaderCompleted(Exception exception)
-        {
         }
 #endif
     }

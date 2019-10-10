@@ -3,7 +3,6 @@
 
 using System;
 using System.IO.Pipelines;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Bing.AspNetCore.Connections.InlineSocket.Logging;
@@ -11,24 +10,25 @@ using Microsoft.Bing.AspNetCore.Connections.InlineSocket.Memory;
 using Microsoft.Bing.AspNetCore.Connections.InlineSocket.Network;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
+namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Pipelines
 {
-    public class ConnectionPipeReader : PipeReader, IDisposable
+    public class SocketPipeReader : PipeReader, IDisposable
     {
         private readonly IConnectionLogger _logger;
         private readonly IConnection _connection;
         private readonly INetworkSocket _socket;
         private readonly RollingMemory _buffer;
-        private readonly CancellationTokenSource _writerCompleted;
+
+#if NETSTANDARD2_0
+        private readonly CancellationTokenSource _writerCompleted = new CancellationTokenSource();
+        private Exception _writerCompletedException;
+#endif
 
         private bool _bufferHasUnexaminedData;
         private bool _isCanceled;
         private bool _isCompleted;
-#if NETSTANDARD2_0
-        private Exception _writerCompletedException;
-#endif
 
-        public ConnectionPipeReader(
+        public SocketPipeReader(
             IConnectionLogger logger,
             InlineSocketsOptions options,
             IConnection connection,
@@ -38,7 +38,6 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
             _connection = connection;
             _socket = socket;
             _buffer = new RollingMemory(options.MemoryPool);
-            _writerCompleted = new CancellationTokenSource();
         }
 
         public bool IsCanceled => _isCanceled;
@@ -48,6 +47,9 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
         public void Dispose()
         {
             _buffer.Dispose();
+#if NETSTANDARD2_0
+            _writerCompleted.Dispose();
+#endif
         }
 
         public override bool TryRead(out ReadResult result)
@@ -57,20 +59,12 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
 
         public override async ValueTask<ReadResult> ReadAsync(CancellationToken cancellationToken)
         {
-            // TODO: return unexamined memory immediately
-            if (_bufferHasUnexaminedData)
+            if (_bufferHasUnexaminedData == false &&
+                IsCompleted == false)
             {
-                return new ReadResult(
-                    _buffer.GetOccupiedMemory(),
-                    isCanceled: IsCanceled,
-                    isCompleted: IsCompleted);
-            }
-
-            try
-            {
-                if (!IsCompleted)
+                try
                 {
-                    // TODO: better size hint?
+                    // memory based on default page size for MemoryPool being used
                     var memory = _buffer.GetTrailingMemory();
 
                     _logger.LogTrace("TODO: ReadStarting");
@@ -79,29 +73,40 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
 
                     if (bytes != 0)
                     {
-                        var text = Encoding.UTF8.GetString(memory.Slice(0, bytes).ToArray());
-                        _bufferHasUnexaminedData = true;
+                        // advance rolling memory based on number of bytes received
                         _buffer.TrailingMemoryFilled(bytes);
+
+                        // the new bytes have not been examined yet. this flag
+                        // is true until the parser calls AdvanceTo with
+                        // an examined SequencePosition corresponding to the tail
+                        _bufferHasUnexaminedData = true;
                     }
                     else
                     {
+                        // reading 0 bytes means the remote client has
+                        // sent FIN and no more bytes will be received
                         _isCompleted = true;
+                        _connection.FireConnectionClosed();
                     }
                 }
-            }
-            catch (TaskCanceledException)
-            {
-                _logger.LogTrace("TODO: ReadCanceled");
-                _isCanceled = true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogTrace("TODO: ReadFailed");
+                catch (TaskCanceledException)
+                {
+                    _logger.LogTrace("TODO: ReadCanceled");
+                    _isCanceled = true;
+                    _connection.FireConnectionClosed();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogTrace(ex, "TODO: ReadFailed");
 
-                // Return ReadResult.IsCompleted == true from now on
-                // because we assume any read exceptions are not temporary
-                _isCompleted = true;
-                FireWriterCompleted(ex);
+                    // Return ReadResult.IsCompleted == true from now on
+                    // because we assume any read exceptions are not temporary
+                    _isCompleted = true;
+                    _connection.FireConnectionClosed();
+#if NETSTANDARD2_0
+                    FireWriterCompleted(ex);
+#endif
+                }
             }
 
             return new ReadResult(
@@ -134,7 +139,9 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
             _logger.LogTrace(exception, "TODO: PipeReaderComplete");
 
             _isCompleted = true;
+#if NETSTANDARD2_0
             _connection.OnPipeReaderComplete(exception);
+#endif
         }
 
 #if NETSTANDARD2_0
@@ -147,10 +154,6 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
         {
             _writerCompletedException = exception;
             _writerCompleted.Cancel();
-        }
-#else
-        public void FireWriterCompleted(Exception exception)
-        {
         }
 #endif
     }

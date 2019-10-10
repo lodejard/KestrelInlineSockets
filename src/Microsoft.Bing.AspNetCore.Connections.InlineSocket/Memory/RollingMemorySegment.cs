@@ -8,9 +8,9 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Memory
 {
     public class RollingMemorySegment : ReadOnlySequenceSegment<byte>, IDisposable
     {
-        private IMemoryOwner<byte> _rental;
+        private readonly IMemoryOwner<byte> _rental;
 
-        public RollingMemorySegment(IMemoryOwner<byte> rental, long runningIndex, long runningOrdinal)
+        public RollingMemorySegment(IMemoryOwner<byte> rental, long runningIndex)
         {
             _rental = rental;
             Memory = _rental.Memory;
@@ -22,8 +22,6 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Memory
             get => (RollingMemorySegment)base.Next;
             set => base.Next = value;
         }
-
-        public int RunningOrdinal { get; set; }
 
         public void Dispose()
         {

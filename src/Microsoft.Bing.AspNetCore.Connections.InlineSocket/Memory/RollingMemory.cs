@@ -9,11 +9,13 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Memory
 {
     public class RollingMemory : IDisposable
     {
+#pragma warning disable IDE0069 // Disposable fields should be disposed
         private readonly MemoryPool<byte> _memoryPool;
         private RollingMemorySegment _firstSegment;
         private int _firstIndex;
         private RollingMemorySegment _lastSegment;
         private int _lastIndex;
+#pragma warning restore IDE0069 // Disposable fields should be disposed
 
         public RollingMemory(MemoryPool<byte> memoryPool)
         {
@@ -38,27 +40,27 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Memory
 
         public ReadOnlySequence<byte> GetOccupiedMemory()
         {
+            if (_firstSegment == null && _lastSegment == null)
+            {
+                return ReadOnlySequence<byte>.Empty;
+            }
+
             return new ReadOnlySequence<byte>(_firstSegment, _firstIndex, _lastSegment, _lastIndex);
         }
 
         public void ConsumeOccupiedMemory(SequencePosition consumed)
         {
-            var consumedObject = consumed.GetObject();
-            var consumedInteger = consumed.GetInteger();
-            while (consumedObject != _firstSegment)
-            {
-                DisposeFirstSegment();
-            }
+            var consumedSegment = (RollingMemorySegment)consumed.GetObject();
+            var consumedIndex = consumed.GetInteger();
 
-            _firstIndex = consumedInteger;
+            var firstPosition = _firstSegment.RunningIndex + _firstIndex;
+            var consumedPosition = consumedSegment.RunningIndex + consumedIndex;
 
-            if (_firstSegment != _lastSegment && _firstIndex == _firstSegment.Memory.Length)
-            {
-                DisposeFirstSegment();
-            }
+            var consumedCount = consumedPosition - firstPosition;
+            ConsumeOccupiedMemory(consumedCount);
         }
 
-        public void ConsumeOccupiedMemory(int consumed)
+        public void ConsumeOccupiedMemory(long consumed)
         {
             var remaining = consumed;
             while (remaining != 0)
@@ -66,7 +68,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Memory
                 var occupied = _firstSegment.Memory.Length - _firstIndex;
                 if (remaining < occupied)
                 {
-                    _firstIndex += remaining;
+                    _firstIndex += (int)remaining;
                     break;
                 }
 
@@ -74,7 +76,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Memory
                 remaining -= occupied;
             }
 
-            if (_firstSegment != _lastSegment && _firstIndex == _firstSegment.Memory.Length)
+            if (_firstSegment != null && _firstIndex == _firstSegment.Memory.Length)
             {
                 DisposeFirstSegment();
             }
@@ -82,10 +84,27 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Memory
 
         public void DisposeFirstSegment()
         {
-            var consumedSegment = _firstSegment;
-            _firstSegment = consumedSegment.Next;
-            _firstIndex = 0;
-            consumedSegment.Dispose();
+            if (_firstSegment == null && _lastSegment == null)
+            {
+                return;
+            }
+
+            var disposedSegment = _firstSegment;
+
+            if (_firstSegment == _lastSegment)
+            {
+                _firstSegment = null;
+                _firstIndex = 0;
+                _lastSegment = null;
+                _lastIndex = 0;
+            }
+            else
+            {
+                _firstSegment = disposedSegment.Next;
+                _firstIndex = 0;
+            }
+
+            disposedSegment.Dispose();
         }
 
         public Memory<byte> GetTrailingMemory(int sizeHint = 0)
@@ -95,7 +114,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Memory
             if (_firstSegment == null && _lastSegment == null)
             {
                 var rental = _memoryPool.Rent(sizeHint);
-                var segment = new RollingMemorySegment(rental, 0, 0);
+                var segment = new RollingMemorySegment(rental, 0);
                 _firstSegment = segment;
                 _lastSegment = segment;
                 return rental.Memory;
@@ -116,8 +135,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Memory
                 var rental = _memoryPool.Rent(sizeHint);
                 _lastSegment.Next = new RollingMemorySegment(
                     rental,
-                    _lastSegment.RunningIndex + _lastSegment.Memory.Length,
-                    _lastSegment.RunningOrdinal + 1);
+                    _lastSegment.RunningIndex + _lastIndex);
                 _lastSegment = _lastSegment.Next;
                 _lastIndex = 0;
                 return rental.Memory;

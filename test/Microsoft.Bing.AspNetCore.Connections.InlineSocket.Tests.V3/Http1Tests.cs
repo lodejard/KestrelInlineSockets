@@ -9,30 +9,58 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Bing.AspNetCore.Connections.InlineSocket.TestHelpers;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
 {
-    public class Http1Tests
+    public class Http1Tests : IDisposable
     {
-        [Fact]
-        public async Task ServerCanStartAndStop()
+        public Http1Tests(ITestOutputHelper output)
         {
-            using var test = new TestContext();
-
-            await test.Server.StartAsync();
-
-            await test.Server.StopAsync();
+            Output = output;
+            Test = new TestContext();
         }
 
-        [Fact]
-        public async Task GetMethodReturnsResponse()
-        {
-            using var test = new TestContext();
+        public ITestOutputHelper Output { get; }
+        public TestContext Test { get; }
 
-            test.App.OnRequest = async message =>
+        void IDisposable.Dispose()
+        {
+            Test.Logging.WriteTo(Output.WriteLine);
+            Test.Dispose();
+        }
+
+        public static List<object[]> Schemes()
+        {
+            return new List<object[]>
+            {
+                new object[]{"http"},
+                new object[]{"https"},
+            };
+        }
+
+        [Theory]
+        [MemberData(nameof(Schemes))]
+        public async Task ServerCanStartAndStop(string scheme)
+        {
+            Test.EndPoint.Scheme = scheme;
+
+            await Test.Server.StartAsync();
+
+            await Test.Server.StopAsync();
+        }
+
+        [Theory]
+        [MemberData(nameof(Schemes))]
+        public async Task GetMethodReturnsResponse(string scheme)
+        {
+            Test.EndPoint.Scheme = scheme;
+
+            Test.App.OnRequest = async message =>
             {
                 var request = message.Get<IHttpRequestFeature>();
                 var response = message.Get<IHttpResponseFeature>();
@@ -43,62 +71,72 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
                 message.ResponseStream.Write(bytes, 0, bytes.Length);
             };
 
-            await test.Server.StartAsync();
+            await Test.Server.StartAsync();
 
-            var responseMessage = await test.Client.GetAsync("/");
+            var responseMessage = await Test.Client.GetAsync("/");
 
             var responseBody = await responseMessage.Content.ReadAsStringAsync();
 
             Assert.Equal("Hello world!", responseBody);
+
+            await Test.Server.StopAsync();
         }
 
-        [Fact]
-        public async Task MultipleGetMethodsEachExecute()
+        [Theory]
+        [MemberData(nameof(Schemes))]
+        public async Task MultipleGetMethodsEachExecute(string scheme)
         {
-            using var test = new TestContext();
+            Test.EndPoint.Scheme = scheme;
 
-            await test.Server.StartAsync();
+            await Test.Server.StartAsync();
 
-            var response1 = await test.Client.GetAsync("/request1");
-            var response2 = await test.Client.GetAsync("/request2");
-            var response3 = await test.Client.GetAsync("/request3");
+            var response1 = await Test.Client.GetAsync("/request1");
+            var response2 = await Test.Client.GetAsync("/request2");
+            var response3 = await Test.Client.GetAsync("/request3");
+
+            await Test.Server.StopAsync();
+
+            Assert.Equal(HttpStatusCode.OK, response1.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, response2.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, response3.StatusCode);
         }
 
-        [Fact]
-        public virtual async Task ServerAcceptsPostBody()
+        [Theory]
+        [MemberData(nameof(Schemes))]
+        public virtual async Task ServerAcceptsPostBody(string scheme)
         {
-            using var test = new TestContext();
+            Test.EndPoint.Scheme = scheme;
 
-            test.App.OnRequest = async message =>
+            Test.App.OnRequest = async message =>
             {
                 var request = message.Get<IHttpRequestFeature>();
                 var response = message.Get<IHttpResponseFeature>();
 
                 response.Headers["Content-Type"] = "text/plain";
 
-                using (var reader = new StreamReader(request.Body))
-                {
-                    var text = reader.ReadToEnd();
-                    using (var writer = new StreamWriter(message.ResponseStream))
-                    {
-                        writer.Write(text);
-                    }
-                }
+                using var reader = new StreamReader(request.Body);
+                var text = reader.ReadToEnd();
+
+                using var writer = new StreamWriter(message.ResponseStream);
+                writer.Write(text);
             };
 
-            await test.Server.StartAsync();
+            await Test.Server.StartAsync();
 
-            var response1 = await test.Client.PostStringAsync("/", new StringContent("Request Data One"));
-            var response2 = await test.Client.PostStringAsync("/", new StringContent("Request Data Two"));
-            var response3 = await test.Client.PostStringAsync("/", new StringContent("Request Data Three"));
+            var response1 = await Test.Client.PostStringAsync("/", new StringContent("Request Data One"));
+            var response2 = await Test.Client.PostStringAsync("/", new StringContent("Request Data Two"));
+            var response3 = await Test.Client.PostStringAsync("/", new StringContent("Request Data Three"));
+
+            await Test.Server.StopAsync();
         }
 
-        [Fact]
-        public virtual async Task VeryLargeRequestAndResponseBody()
+        [Theory]
+        [MemberData(nameof(Schemes))]
+        public virtual async Task VeryLargeRequestAndResponseBody(string scheme)
         {
-            using var test = new TestContext();
+            Test.EndPoint.Scheme = scheme;
 
-            test.App.OnRequest = async message =>
+            Test.App.OnRequest = async message =>
             {
                 var request = message.Get<IHttpRequestFeature>();
                 var response = message.Get<IHttpResponseFeature>();
@@ -110,7 +148,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
                 message.ResponseStream.Write(memory.ToArray());
             };
 
-            await test.Server.StartAsync();
+            await Test.Server.StartAsync();
 
             var bytes1 = new byte[1 << 10]; // 1kb
             var bytes2 = new byte[1 << 15]; // 32kb
@@ -121,25 +159,32 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
             random.NextBytes(bytes2);
             random.NextBytes(bytes3);
 
-            var response1 = await test.Client.PostBytesAsync("/", new ByteArrayContent(bytes1));
-            var response2 = await test.Client.PostBytesAsync("/", new ByteArrayContent(bytes2));
-            var response3 = await test.Client.PostBytesAsync("/", new ByteArrayContent(bytes3));
+            var response1 = await Test.Client.PostBytesAsync("/", new ByteArrayContent(bytes1));
+            var response2 = await Test.Client.PostBytesAsync("/", new ByteArrayContent(bytes2));
+            var response3 = await Test.Client.PostBytesAsync("/", new ByteArrayContent(bytes3));
 
-            await test.Server.StopAsync();
+            Assert.Equal(bytes1.Length, response1.content.Length);
+            Assert.Equal(bytes2.Length, response2.content.Length);
+            Assert.Equal(bytes3.Length, response3.content.Length);
+
+            await Test.Server.StopAsync();
 
             Assert.All(response1.content.Zip(bytes1, (a, b) => (a, b)), pair => Assert.Equal(pair.a, pair.b));
             Assert.All(response2.content.Zip(bytes2, (a, b) => (a, b)), pair => Assert.Equal(pair.a, pair.b));
             Assert.All(response3.content.Zip(bytes3, (a, b) => (a, b)), pair => Assert.Equal(pair.a, pair.b));
+
+            await Test.Server.StopAsync();
         }
 
-        [Fact]
-        public virtual async Task ConnectionKeepAliveByDefault()
+        [Theory]
+        [MemberData(nameof(Schemes))]
+        public virtual async Task ConnectionKeepAliveByDefault(string scheme)
         {
-            using var test = new TestContext();
+            Test.EndPoint.Scheme = scheme;
 
             var connectionIds = new List<string>();
 
-            test.App.OnRequest = async message =>
+            Test.App.OnRequest = async message =>
             {
                 var request = message.Get<IHttpRequestFeature>();
                 var response = message.Get<IHttpResponseFeature>();
@@ -153,25 +198,29 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
                 message.ResponseStream.Write(bytes, 0, bytes.Length);
             };
 
-            await test.Server.StartAsync();
+            await Test.Server.StartAsync();
 
-            var response1 = await test.Client.GetStringAsync("/");
-            var response2 = await test.Client.GetStringAsync("/");
-            var response3 = await test.Client.GetStringAsync("/");
+            var response1 = await Test.Client.GetStringAsync("/");
+            var response2 = await Test.Client.GetStringAsync("/");
+            var response3 = await Test.Client.GetStringAsync("/");
 
             Assert.Single(connectionIds.Distinct());
 
-            Assert.Single(from log in test.Logging.LogItems where log.EventId.Name == "SocketAccepted" select log);
+            Assert.Single(from log in Test.Logging.LogItems where log.EventId.Name == "SocketAccepted" select log);
+
+            await Test.Server.StopAsync();
+
         }
 
-        [Fact]
-        public virtual async Task ConnectionCloseCanBeProvided()
+        [Theory]
+        [MemberData(nameof(Schemes))]
+        public virtual async Task ConnectionCloseCanBeProvided(string scheme)
         {
-            using var test = new TestContext();
+            Test.EndPoint.Scheme = scheme;
 
             var connectionIds = new List<string>();
 
-            test.App.OnRequest = async message =>
+            Test.App.OnRequest = async message =>
             {
                 var request = message.Get<IHttpRequestFeature>();
                 var response = message.Get<IHttpResponseFeature>();
@@ -186,15 +235,42 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
                 message.ResponseStream.Write(bytes, 0, bytes.Length);
             };
 
-            await test.Server.StartAsync();
+            await Test.Server.StartAsync();
 
-            var response1 = await test.Client.GetStringAsync("/");
-            var response2 = await test.Client.GetStringAsync("/");
-            var response3 = await test.Client.GetStringAsync("/");
+            var response1 = await Test.Client.GetStringAsync("/");
+            var response2 = await Test.Client.GetStringAsync("/");
+            var response3 = await Test.Client.GetStringAsync("/");
 
             Assert.Equal(3, connectionIds.Distinct().Count());
 
-            Assert.Equal(3, (from log in test.Logging.LogItems where log.EventId.Name == "SocketAccepted" select log).Count());
+            Assert.Equal(3, (from log in Test.Logging.LogItems where log.EventId.Name == "SocketAccepted" select log).Count());
+
+            await Test.Server.StopAsync();
+        }
+
+        [Theory]
+        [MemberData(nameof(Schemes))]
+        public virtual async Task RequestCanBeAborted(string scheme)
+        {
+            Test.EndPoint.Scheme = scheme;
+
+            var connectionIds = new List<string>();
+
+            Test.App.OnRequest = async message =>
+            {
+                var httpContext = new DefaultHttpContext(message.Features);
+                httpContext.Abort();
+            };
+
+            await Test.Server.StartAsync();
+
+            var error1 = await Assert.ThrowsAsync<HttpRequestException>(async () => await Test.Client.GetStringAsync("/request1"));
+            var error2 = await Assert.ThrowsAsync<HttpRequestException>(async () => await Test.Client.GetStringAsync("/request2"));
+            var error3 = await Assert.ThrowsAsync<HttpRequestException>(async () => await Test.Client.GetStringAsync("/request3"));
+
+            await Test.Server.StopAsync();
+
+            Assert.Equal(3, (from log in Test.Logging.LogItems where log.EventId.Name == "SocketAccepted" select log).Count());
         }
     }
 }

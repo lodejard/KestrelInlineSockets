@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests.Fixtures
 {
-    public class LoggingFixture : IDisposable
+    public class LoggingFixture
     {
         public List<LogItem> LogItems { get; } = new List<LogItem>();
 
@@ -26,8 +26,23 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests.Fixtures
             });
         }
 
-        public void Dispose()
+        public List<(string CategoryName, EventId EventId)> FatalLogTypes { get; } = new List<(string CategoryName, EventId EventId)>
         {
+            { ("Microsoft.AspNetCore.Server.Kestrel", new EventId(16, "NotAllConnectionsClosedGracefully")) }
+        };
+
+        public void WriteTo(Action<string> writeLine)
+        {
+            foreach (var log in LogItems.ToArray())
+            {
+                writeLine($"{log.LogLevel} {log.CategoryName}.{log.EventId} {log.Message}");
+            }
+
+            var fatalLogs = LogItems.Where(log => FatalLogTypes.Contains((log.CategoryName, log.EventId)));
+            if (fatalLogs.Any())
+            {
+                throw new InvalidOperationException($"Fatal log messages detected: {Environment.NewLine}{string.Join(Environment.NewLine, fatalLogs)}");
+            }
         }
 
         public void Record(string categoryName, LogLevel logLevel, EventId eventId, IReadOnlyCollection<KeyValuePair<string, object>> properties, Exception exception, string message)
@@ -64,8 +79,8 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests.Fixtures
 
         public class Logger : ILogger
         {
-            private LoggingFixture _fixture;
-            private string _categoryName;
+            private readonly LoggingFixture _fixture;
+            private readonly string _categoryName;
 
             public Logger(LoggingFixture fixture, string categoryName)
             {

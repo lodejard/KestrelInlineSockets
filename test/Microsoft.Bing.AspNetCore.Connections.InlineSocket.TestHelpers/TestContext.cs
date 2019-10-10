@@ -1,5 +1,4 @@
 using System;
-using System.Net.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Bing.AspNetCore.Connections.InlineSocket.TestHelpers.Fixtures;
 using Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests.Fixtures;
@@ -19,7 +18,6 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.TestHelpers
                 .AddSingleton<ServerFixture>()
                 .AddSingleton<ServicesFixture>()
                 .AddSingleton<TimeoutFixture>()
-                .AddSingleton<HttpClient>()
                 .AddSingleton<OptionsFixture>()
                 .AddSingleton<ClientFixture>()
                 .BuildServiceProvider();

@@ -7,6 +7,7 @@ using System.IO.Pipelines;
 using System.Reflection;
 using Microsoft.Bing.AspNetCore.Connections.InlineSocket.Logging;
 using Microsoft.Bing.AspNetCore.Connections.InlineSocket.Network;
+using Microsoft.Bing.AspNetCore.Connections.InlineSocket.Pipelines;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
@@ -35,8 +36,8 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
                 options.MemoryPool = memoryPool;
                 options.CreateListener = CreateListener;
                 options.CreateConnection = CreateConnection;
-                options.CreatePipeReader = CreatePipeReader;
-                options.CreatePipeWriter = CreatePipeWriter;
+                options.CreateSocketPipelines = CreateSocketPipelines;
+                options.WrapTransportPipelines = WrapTransportPipelines;
 
                 Listener CreateListener()
                 {
@@ -48,14 +49,17 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
                     return new Connection(connectionLogger, options, socket);
                 }
 
-                PipeReader CreatePipeReader(IConnection connection, INetworkSocket socket)
+                (PipeReader input, PipeWriter output) CreateSocketPipelines(IConnection connection, INetworkSocket socket)
                 {
-                    return new ConnectionPipeReader(connectionLogger, options, connection, socket);
+                    var input = new SocketPipeReader(connectionLogger, options, connection, socket);
+                    var output = new SocketPipeWriter(connectionLogger, options, connection, socket);
+                    return (input, output);
                 }
 
-                PipeWriter CreatePipeWriter(IConnection connection, INetworkSocket socket)
+                static IDuplexPipe WrapTransportPipelines(IConnection connection, IDuplexPipe transport)
                 {
-                    return new ConnectionPipeWriter(connectionLogger, options, connection, socket);
+                    var input = new CancelNotificationPipeReader(transport.Input, connection.CancelPendingRead);
+                    return new DuplexPipe(input, transport.Output);
                 }
             };
         }

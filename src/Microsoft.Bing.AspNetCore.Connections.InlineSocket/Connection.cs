@@ -16,43 +16,34 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
 {
     public partial class Connection : IConnection
     {
-        private readonly IFeatureCollection _features;
         private readonly IConnectionLogger _logger;
         private readonly InlineSocketsOptions _options;
         private readonly INetworkSocket _socket;
-        private readonly PipeReader _connectionPipeReader;
-        private readonly PipeWriter _connectionPipeWriter;
-        private readonly IPEndPoint _socketRemoteEndPoint;
-        private readonly IPEndPoint _socketLocalEndPoint;
+        private readonly PipeReader _socketInput;
+        private readonly PipeWriter _socketOutput;
         private readonly CancellationTokenSource _connectionClosedTokenSource;
-        private readonly object _synchronizeCompletion = new object();
 
         private string _connectionId;
-        private IDuplexPipe _transport;
-        private bool _pipeWriterComplete;
-        private bool _pipeReaderComplete;
 
         public Connection(
             IConnectionLogger logger,
             InlineSocketsOptions options,
             INetworkSocket socket)
         {
-            _features = new FeatureCollection(this);
+            Features = new FeatureCollection(this);
             _logger = logger;
             _options = options;
             _socket = socket;
-            _transport = this;
-            _connectionPipeReader = options.CreatePipeReader(this, socket);
-            _connectionPipeWriter = options.CreatePipeWriter(this, socket);
+            RemoteEndPoint = _socket.RemoteEndPoint;
+            LocalEndPoint = _socket.LocalEndPoint;
+
+            (_socketInput, _socketOutput) = options.CreateSocketPipelines(this, socket);
 
             _connectionClosedTokenSource = new CancellationTokenSource();
-
-            // preserving these values to avoid errors once the socket is closed
-            _socketRemoteEndPoint = _socket.RemoteEndPoint;
-            _socketLocalEndPoint = _socket.LocalEndPoint;
+            _connectionClosedTokenSource.Token.Register(() => _logger.LogTrace("TODO: ConnectionClosed"));
         }
 
-        public IFeatureCollection Features => _features;
+        public virtual IFeatureCollection Features { get; private set; }
 
         public virtual string ConnectionId
         {
@@ -60,75 +51,52 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
             set => _connectionId = value;
         }
 
-        void IConnection.Abort(ConnectionAbortedException abortReason)
-        {
-            OnAbortRequested(abortReason);
-        }
+        public virtual EndPoint LocalEndPoint { get; set; }
 
-        void IDisposable.Dispose()
-        {
-            _logger.LogDebug("TODO: Dispose {ConnectionId}", ConnectionId);
+        public virtual EndPoint RemoteEndPoint { get; set; }
 
-            (_connectionPipeReader as IDisposable)?.Dispose();
-            (_connectionPipeWriter as IDisposable)?.Dispose();
-            _socket.Dispose();
-        }
-
-        async ValueTask IAsyncDisposable.DisposeAsync()
+        public virtual async ValueTask DisposeAsync()
         {
+            _logger.LogDebug("TODO: DisposeAsync {ConnectionId}", ConnectionId);
+
+            await _socket.DisposeAsync();
+
             ((IDisposable)this).Dispose();
         }
 
-        void IConnection.OnPipeReaderComplete(Exception exception)
+        public virtual void Dispose()
         {
-            OnPipeComplete(pipeReaderComplete: true);
+            _logger.LogDebug("TODO: Dispose {ConnectionId}", ConnectionId);
+
+            (_socketInput as IDisposable)?.Dispose();
+            (_socketOutput as IDisposable)?.Dispose();
+            _socket.Dispose();
+
+            _connectionClosedTokenSource.Dispose();
+#if NETSTANDARD2_0
+            _connectionCloseRequestedSource.Dispose();
+#endif
         }
 
-        void IConnection.OnPipeWriterComplete(Exception exception)
+        public virtual void CancelPendingRead()
         {
-            OnPipeComplete(pipeWriterComplete: true);
+            _socketInput.CancelPendingRead();
         }
 
-        private void OnPipeComplete(
-            bool pipeReaderComplete = false,
-            bool pipeWriterComplete = false)
+        public virtual void FireConnectionClosed()
         {
-            var connectionClosed = false;
-            var readerRemaining = false;
-            lock (_synchronizeCompletion)
-            {
-                if (pipeReaderComplete)
-                {
-                    _pipeReaderComplete = true;
-                }
-
-                if (pipeWriterComplete)
-                {
-                    _pipeWriterComplete = true;
-                }
-
-                connectionClosed = _pipeReaderComplete && _pipeWriterComplete;
-                readerRemaining = (_pipeReaderComplete == false) && _pipeWriterComplete;
-            }
-
-            if (connectionClosed)
-            {
-                // signal all tranceiving is complete
-                _connectionClosedTokenSource.Cancel(throwOnFirstException: false);
-            }
-            else if (readerRemaining)
-            {
-                // this is necessary for Kestrel to realize the connection has ended
-                _connectionPipeReader.CancelPendingRead();
-            }
+            _connectionClosedTokenSource.Cancel();
         }
 
-        private void OnAbortRequested(ConnectionAbortedException abortReason)
+        public virtual void Abort(ConnectionAbortedException abortReason)
         {
-            _logger.LogDebug(abortReason, "TODO: AbortRequested {ConnectionId}", ConnectionId);
+            _logger.LogDebug(abortReason, "TODO: Abort {ConnectionId}", ConnectionId);
+
+            // immediate FIN so client understands server will not complete current response or accept subsequent requests
+            _socket.ShutdownSend();
 
             // stop any additional data from arriving
-            _connectionPipeReader.CancelPendingRead();
+            _socketInput.CancelPendingRead();
         }
     }
 }

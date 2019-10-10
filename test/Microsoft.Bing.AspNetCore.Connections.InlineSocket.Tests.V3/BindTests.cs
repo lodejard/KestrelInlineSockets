@@ -1,11 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
-
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Bing.AspNetCore.Connections.InlineSocket.TestHelpers;
 using Xunit;
 
@@ -36,9 +34,10 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
 
             // verify connection's remote port is same as client's local port
             var localIPEndPoint = (IPEndPoint)client.LocalEndPoint;
-            var remotePort = ((IHttpConnectionFeature)connection).RemotePort;
-            Assert.Equal(localIPEndPoint.Port, remotePort);
+            var remoteIPEndPoint = (IPEndPoint)connection.RemoteEndPoint;
+            Assert.Equal(localIPEndPoint.Port, remoteIPEndPoint.Port);
 
+            client.Dispose();
             await connection.DisposeAsync();
             await listener.DisposeAsync();
         }

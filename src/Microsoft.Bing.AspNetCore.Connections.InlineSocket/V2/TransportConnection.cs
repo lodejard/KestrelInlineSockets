@@ -14,7 +14,6 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
     public class TransportConnection : Microsoft.AspNetCore.Server.Kestrel.Transport.Abstractions.Internal.TransportConnection
     {
         private readonly IConnection _connection;
-        private FeatureReference<IConnectionIdFeature> _connectionIdFeature;
         private FeatureReference<IConnectionItemsFeature> _connectionItemsFeature;
         private FeatureReference<IConnectionTransportFeature> _connectionTransportFeature;
         private FeatureReference<IConnectionLifetimeFeature> _connectionLifetimeFeature;
@@ -36,8 +35,8 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
 
         public override string ConnectionId
         {
-            get => _connectionIdFeature.Fetch(Features).ConnectionId;
-            set => _connectionIdFeature.Fetch(Features).ConnectionId = value;
+            get => _connection.ConnectionId;
+            set => _connection.ConnectionId = value;
         }
 
         public override IDuplexPipe Transport
