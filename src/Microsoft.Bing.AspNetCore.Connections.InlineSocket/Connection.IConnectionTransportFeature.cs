@@ -8,14 +8,16 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
 {
     public partial class Connection : IConnectionTransportFeature, IDuplexPipe
     {
+        private IDuplexPipe _transport;
+
         public IDuplexPipe Transport
         {
-            get => _transport;
-            set => _transport = value;
+            get => _transport ?? this;
+            set => _transport = _options.WrapTransportPipelines(this, value);
         }
 
-        PipeReader IDuplexPipe.Input => _connectionPipeReader;
+        PipeReader IDuplexPipe.Input => _socketInput;
 
-        PipeWriter IDuplexPipe.Output => _connectionPipeWriter;
+        PipeWriter IDuplexPipe.Output => _socketOutput;
     }
 }

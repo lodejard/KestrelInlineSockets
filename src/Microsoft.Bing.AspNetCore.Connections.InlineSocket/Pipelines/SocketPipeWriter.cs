@@ -10,9 +10,9 @@ using Microsoft.Bing.AspNetCore.Connections.InlineSocket.Memory;
 using Microsoft.Bing.AspNetCore.Connections.InlineSocket.Network;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
+namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Pipelines
 {
-    public class ConnectionPipeWriter : PipeWriter, IDisposable
+    public class SocketPipeWriter : PipeWriter, IDisposable
     {
         private readonly IConnectionLogger _logger;
         private readonly INetworkSocket _socket;
@@ -27,7 +27,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
         private bool _isCanceled;
         private bool _isCompleted;
 
-        public ConnectionPipeWriter(
+        public SocketPipeWriter(
             IConnectionLogger logger,
             InlineSocketsOptions options,
             IConnection connection,

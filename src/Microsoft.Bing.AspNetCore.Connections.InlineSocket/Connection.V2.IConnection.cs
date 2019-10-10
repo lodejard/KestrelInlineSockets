@@ -52,7 +52,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
             else if (readerRemaining)
             {
                 // this is necessary for Kestrel to realize the connection has ended
-                _connectionPipeReader.CancelPendingRead();
+                CancelPendingRead();
             }
         }
     }

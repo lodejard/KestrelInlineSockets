@@ -1,5 +1,4 @@
 using System;
-using System.Net.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Bing.AspNetCore.Connections.InlineSocket.TestHelpers.Fixtures;
 using Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests.Fixtures;

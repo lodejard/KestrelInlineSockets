@@ -19,12 +19,11 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
         private readonly IConnectionLogger _logger;
         private readonly InlineSocketsOptions _options;
         private readonly INetworkSocket _socket;
-        private readonly PipeReader _connectionPipeReader;
-        private readonly PipeWriter _connectionPipeWriter;
+        private readonly PipeReader _socketInput;
+        private readonly PipeWriter _socketOutput;
         private readonly CancellationTokenSource _connectionClosedTokenSource;
 
         private string _connectionId;
-        private IDuplexPipe _transport;
 
         public Connection(
             IConnectionLogger logger,
@@ -38,9 +37,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
             RemoteEndPoint = _socket.RemoteEndPoint;
             LocalEndPoint = _socket.LocalEndPoint;
 
-            _transport = this;
-            _connectionPipeReader = options.CreatePipeReader(this, socket);
-            _connectionPipeWriter = options.CreatePipeWriter(this, socket);
+            (_socketInput, _socketOutput) = options.CreateSocketPipelines(this, socket);
 
             _connectionClosedTokenSource = new CancellationTokenSource();
             _connectionClosedTokenSource.Token.Register(() => _logger.LogTrace("TODO: ConnectionClosed"));
@@ -71,14 +68,19 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
         {
             _logger.LogDebug("TODO: Dispose {ConnectionId}", ConnectionId);
 
-            (_connectionPipeReader as IDisposable)?.Dispose();
-            (_connectionPipeWriter as IDisposable)?.Dispose();
+            (_socketInput as IDisposable)?.Dispose();
+            (_socketOutput as IDisposable)?.Dispose();
             _socket.Dispose();
 
             _connectionClosedTokenSource.Dispose();
 #if NETSTANDARD2_0
             _connectionCloseRequestedSource.Dispose();
 #endif
+        }
+
+        public virtual void CancelPendingRead()
+        {
+            _socketInput.CancelPendingRead();
         }
 
         public virtual void FireConnectionClosed()
@@ -91,11 +93,10 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
             _logger.LogDebug(abortReason, "TODO: Abort {ConnectionId}", ConnectionId);
 
             // immediate FIN so client understands server will not complete current response or accept subsequent requests
-            //_socket.ShutdownSend();
-            _socket.Dispose();
+            _socket.ShutdownSend();
 
             // stop any additional data from arriving
-            _connectionPipeReader.CancelPendingRead();
+            _socketInput.CancelPendingRead();
         }
     }
 }

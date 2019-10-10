@@ -26,30 +26,27 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests.Fixtures
             });
         }
 
+        public List<(string CategoryName, EventId EventId)> FatalLogTypes { get; } = new List<(string CategoryName, EventId EventId)>
+        {
+            { ("Microsoft.AspNetCore.Server.Kestrel", new EventId(16, "NotAllConnectionsClosedGracefully")) }
+        };
+
         public void WriteTo(Action<string> writeLine)
         {
-            var error = default(Exception);
             foreach (var log in LogItems.ToArray())
             {
                 writeLine($"{log.LogLevel} {log.CategoryName}.{log.EventId} {log.Message}");
-
-                if (log.EventId.Name == "NotAllConnectionsClosedGracefully")
-                {
-                    error = new Exception("NotAllConnectionsClosedGracefully");
-                }
             }
-            if (error != default)
+
+            var fatalLogs = LogItems.Where(log => FatalLogTypes.Contains((log.CategoryName, log.EventId)));
+            if (fatalLogs.Any())
             {
-                throw error;
+                throw new InvalidOperationException($"Fatal log messages detected: {Environment.NewLine}{string.Join(Environment.NewLine, fatalLogs)}");
             }
         }
 
         public void Record(string categoryName, LogLevel logLevel, EventId eventId, IReadOnlyCollection<KeyValuePair<string, object>> properties, Exception exception, string message)
         {
-            if (eventId.Name == "NotAllConnectionsClosedGracefully")
-            {
-                var x = 5;
-            }
             LogItems.Add(new LogItem
             {
                 CategoryName = categoryName,

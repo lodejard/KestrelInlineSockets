@@ -24,8 +24,8 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
 
         public Func<INetworkSocket, IConnection> CreateConnection { get; set; }
 
-        public Func<IConnection, INetworkSocket, PipeReader> CreatePipeReader { get; set; }
+        public Func<IConnection, INetworkSocket, (PipeReader input, PipeWriter output)> CreateSocketPipelines { get; set; }
 
-        public Func<IConnection, INetworkSocket, PipeWriter> CreatePipeWriter { get; set; }
+        public Func<IConnection, IDuplexPipe, IDuplexPipe> WrapTransportPipelines { get; set; }
     }
 }

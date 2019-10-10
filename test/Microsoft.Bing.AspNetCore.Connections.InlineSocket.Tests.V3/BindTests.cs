@@ -4,7 +4,6 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Bing.AspNetCore.Connections.InlineSocket.TestHelpers;
 using Xunit;
 

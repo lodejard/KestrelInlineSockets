@@ -95,6 +95,10 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
             var response3 = await Test.Client.GetAsync("/request3");
 
             await Test.Server.StopAsync();
+
+            Assert.Equal(HttpStatusCode.OK, response1.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, response2.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, response3.StatusCode);
         }
 
         [Theory]
@@ -265,6 +269,8 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Tests
             var error3 = await Assert.ThrowsAsync<HttpRequestException>(async () => await Test.Client.GetStringAsync("/request3"));
 
             await Test.Server.StopAsync();
+
+            Assert.Equal(3, (from log in Test.Logging.LogItems where log.EventId.Name == "SocketAccepted" select log).Count());
         }
     }
 }

@@ -3,7 +3,6 @@
 
 using System;
 using System.IO.Pipelines;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Bing.AspNetCore.Connections.InlineSocket.Logging;
@@ -11,9 +10,9 @@ using Microsoft.Bing.AspNetCore.Connections.InlineSocket.Memory;
 using Microsoft.Bing.AspNetCore.Connections.InlineSocket.Network;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
+namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket.Pipelines
 {
-    public class ConnectionPipeReader : PipeReader, IDisposable
+    public class SocketPipeReader : PipeReader, IDisposable
     {
         private readonly IConnectionLogger _logger;
         private readonly IConnection _connection;
@@ -29,7 +28,7 @@ namespace Microsoft.Bing.AspNetCore.Connections.InlineSocket
         private bool _isCanceled;
         private bool _isCompleted;
 
-        public ConnectionPipeReader(
+        public SocketPipeReader(
             IConnectionLogger logger,
             InlineSocketsOptions options,
             IConnection connection,
